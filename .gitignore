@@ -1,0 +1,11 @@
+# Entorno de Python
+.venv/
+__pycache__/
+*.pyc
+
+# Datos locales: la base de datos y la llave de sesión se generan al arrancar
+instancia/
+logs/
+
+# Configuración local del editor
+.claude/

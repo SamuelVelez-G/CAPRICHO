@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Mis pedidos · Capricho{% endblock %}
+{% block contenido %}
+<div class="contenedor pagina-simple">
+  <div class="seccion__cabeza">
+    <p class="eyebrow">Historial</p>
+    <h1>Mis pedidos</h1>
+  </div>
+  <div class="pedidos-lista" id="pedidos"></div>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/mis_pedidos.js') }}"></script>{% endblock %}

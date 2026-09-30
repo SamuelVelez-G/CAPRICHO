@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Operación · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Estructuras de datos en acción</p>
+    <h1>Operación de la tienda</h1>
+    <p>La cola de pedidos, la pila de errores, el grafo de domicilios, la búsqueda por índice y el CRUD de productos con los cinco métodos HTTP.</p>
+  </div>
+</section>
+
+<div class="contenedor">
+  <div class="pestanas" role="tablist" aria-label="Secciones de operación">
+    <button role="tab" type="button" aria-selected="true" aria-controls="panel-cola" id="tab-cola" data-pestana="cola">{{ icono("cola") }} Cola de pedidos</button>
+    <button role="tab" type="button" aria-selected="false" aria-controls="panel-pila" id="tab-pila" data-pestana="pila">{{ icono("pila") }} Pila de errores</button>
+    <button role="tab" type="button" aria-selected="false" aria-controls="panel-grafo" id="tab-grafo" data-pestana="grafo">{{ icono("grafo") }} Domicilios</button>
+    <button role="tab" type="button" aria-selected="false" aria-controls="panel-indice" id="tab-indice" data-pestana="indice">{{ icono("lupa") }} Búsqueda por índice</button>
+    <button role="tab" type="button" aria-selected="false" aria-controls="panel-productos" id="tab-productos" data-pestana="productos">{{ icono("vaso") }} Productos (CRUD)</button>
+  </div>
+
+  <section class="pestana" id="panel-cola" role="tabpanel" aria-labelledby="tab-cola">
+    <div class="tarjeta bloque">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Cola FIFO: pedidos pagados esperando preparación</h2>
+          <p class="tarjeta__sub">El primero que pagó es el primero que se prepara. Desencolar es O(1) con <code class="mono">deque.popleft()</code>.</p></div>
+        <button class="boton boton--sm" id="atender" type="button">{{ icono("flecha") }} Atender siguiente</button>
+      </div>
+      <div class="fila-cola" id="fila-cola"></div>
+    </div>
+    <div class="tarjeta">
+      <h2 class="tarjeta__titulo">En preparación</h2>
+      <div class="tabla-caja"><table class="tabla"><thead><tr><th>#</th><th>Cliente</th><th>Productos</th><th>Entrega</th><th class="num">Total</th><th></th></tr></thead><tbody id="en-proceso"></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="pestana" id="panel-pila" role="tabpanel" aria-labelledby="tab-pila" hidden>
+    <div class="tarjeta">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Pila LIFO: errores y eventos de seguridad</h2>
+          <p class="tarjeta__sub">El último error que entró es el primero que se atiende: lo más urgente es lo que acaba de pasar.</p></div>
+        <button class="boton boton--sm" id="desapilar" type="button">{{ icono("ok") }} Atender el de la cima</button>
+      </div>
+      <div class="pila-vis" id="pila-completa"></div>
+    </div>
+  </section>
+
+  <section class="pestana" id="panel-grafo" role="tabpanel" aria-labelledby="tab-grafo" hidden>
+    <div class="domicilios">
+      <div class="tarjeta mapa-caja"><svg class="mapa" id="mapa-operacion" viewBox="0 0 1000 700" role="img" aria-label="Grafo de barrios"></svg></div>
+      <div class="tarjeta ruta-info">
+        <h2 class="tarjeta__titulo">Dijkstra desde Aranjuez</h2>
+        <p class="tarjeta__sub">Toca un barrio del mapa. Usa un heap para sacar siempre el barrio más cercano: O((V + E) log V).</p>
+        <div id="ruta-operacion"><p class="muted">Elige un barrio.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pestana" id="panel-indice" role="tabpanel" aria-labelledby="tab-indice" hidden>
+    <div class="tarjeta">
+      <h2 class="tarjeta__titulo">Buscar una transacción por su idTxn</h2>
+      <p class="tarjeta__sub">El índice es un diccionario idTxn → registro que se arma una vez al arrancar (O(n)). Después, cada búsqueda es un acceso directo: 1 operación, sin importar cuántas transacciones haya. Es la conclusión del primer trabajo.</p>
+      <form class="busqueda-indice" id="form-indice">
+        <input class="entrada" id="clave-indice" type="text" maxlength="40" placeholder="Ej: 100500" aria-label="idTxn">
+        <button class="boton boton--sm" type="submit">{{ icono("lupa") }} Buscar</button>
+      </form>
+      <div id="resultado-indice"></div>
+    </div>
+  </section>
+
+  <section class="pestana" id="panel-productos" role="tabpanel" aria-labelledby="tab-productos" hidden>
+    <div class="rejilla rejilla--12-8">
+      <div class="tarjeta">
+        <div class="tarjeta__cabeza">
+          <div><h2 class="tarjeta__titulo">Productos</h2><p class="tarjeta__sub">GET /api/productos?todos=1</p></div>
+          <button class="boton boton--sm boton--contorno" id="nuevo-producto" type="button">{{ icono("mas") }} Nuevo</button>
+        </div>
+        <div class="tabla-caja"><table class="tabla"><thead><tr><th>#</th><th>Nombre</th><th>Categoría</th><th class="num">Precio</th><th>Activo</th><th></th></tr></thead><tbody id="t-productos"></tbody></table></div>
+      </div>
+      <div class="tarjeta">
+        <h2 class="tarjeta__titulo" id="titulo-producto">Nuevo producto (POST)</h2>
+        <form id="form-producto" novalidate>
+          <div class="campo" data-campo="nombre"><label for="p-nombre">Nombre</label><input id="p-nombre" name="nombre" type="text" maxlength="60"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          <div class="campo" data-campo="descripcion"><label for="p-desc">Descripción</label><input id="p-desc" name="descripcion" type="text" maxlength="200"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          <div class="fila-campos">
+            <div class="campo" data-campo="categoria"><label for="p-cat">Categoría</label><select id="p-cat" name="categoria"><option>GRANIZADO</option><option>ADICION</option></select><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="precio"><label for="p-precio">Precio</label><input id="p-precio" name="precio" type="number" step="100" min="500"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          </div>
+          <div class="fila-campos">
+            <div class="campo" data-campo="onzas"><label for="p-onzas">Onzas</label><input id="p-onzas" name="onzas" type="number" min="4" max="40"><span class="ayuda">Vacío para adiciones.</span><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="imagen"><label for="p-img">Imagen</label><select id="p-img" name="imagen"><option value="">Ninguna</option><option>menu.jpg</option><option>capuchino.jpg</option><option>cargador.jpg</option></select><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          </div>
+          <label class="en-vivo muted"><input type="checkbox" name="activo" checked> Activo (visible en la tienda)</label>
+          <p></p>
+          <div class="hero__acciones">
+            <button class="boton boton--sm" type="submit" id="guardar-producto">POST · Crear</button>
+            <button class="boton boton--sm boton--contorno" type="button" id="patch-producto" hidden>PATCH · solo cambios</button>
+            <button class="boton boton--sm boton--peligro" type="button" id="borrar-producto" hidden>{{ icono("basura") }} DELETE</button>
+            <button class="boton-texto" type="button" id="cancelar-producto" hidden>Cancelar</button>
+          </div>
+          <pre class="codigo-bloque separado" id="log-producto" hidden></pre>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/operacion.js') }}"></script>{% endblock %}

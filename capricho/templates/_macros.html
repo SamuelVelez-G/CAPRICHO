@@ -1,0 +1,12 @@
+{% macro icono(nombre, clase="") -%}
+<svg class="icono {{ clase }}" aria-hidden="true" focusable="false"><use href="{{ url_for('static', filename='img/iconos.svg') }}#{{ nombre }}"></use></svg>
+{%- endmacro %}
+
+{% macro campo(nombre, etiqueta, tipo="text", ayuda="", autocomplete="off", extra="") -%}
+<div class="campo" data-campo="{{ nombre }}">
+  <label for="campo-{{ nombre }}">{{ etiqueta }}</label>
+  <input id="campo-{{ nombre }}" name="{{ nombre }}" type="{{ tipo }}" autocomplete="{{ autocomplete }}" required {{ extra }}>
+  {% if ayuda %}<span class="ayuda">{{ ayuda }}</span>{% endif %}
+  <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+</div>
+{%- endmacro %}

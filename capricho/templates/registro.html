@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Crear cuenta · Capricho{% endblock %}
+{% block contenido %}
+<div class="pagina-dividida">
+  <div class="pagina-dividida__arte">
+    <img src="{{ url_for('static', filename='img/capuchino.jpg') }}" width="720" height="661" alt="Granizado Capricho sabor capuchino">
+  </div>
+  <div class="pagina-dividida__form">
+    <form class="formulario" id="form-registro" novalidate data-siguiente="{{ siguiente }}">
+      <p class="eyebrow">Tu primer Capricho</p>
+      <h1>Crear cuenta</h1>
+      <div class="aviso aviso--error" id="error-general" role="alert" hidden>{{ icono("bloqueo") }}<p></p></div>
+
+      <div class="campo" data-campo="nombre">
+        <label for="campo-nombre">Nombre completo</label>
+        <input id="campo-nombre" name="nombre" type="text" autocomplete="name" data-regla="nombre" required maxlength="60">
+        <span class="ayuda">Solo letras, más de 3.</span>
+        <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+      </div>
+      <div class="fila-campos">
+        <div class="campo" data-campo="email">
+          <label for="campo-email">Correo</label>
+          <input id="campo-email" name="email" type="email" autocomplete="email" data-regla="email" required maxlength="120">
+          <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+        </div>
+        <div class="campo" data-campo="telefono">
+          <label for="campo-telefono">Celular</label>
+          <input id="campo-telefono" name="telefono" type="tel" inputmode="numeric" autocomplete="tel" data-regla="telefono" required maxlength="12" placeholder="3001234567">
+          <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+        </div>
+      </div>
+      <div class="campo" data-campo="password">
+        <label for="campo-password">Contraseña</label>
+        <input id="campo-password" name="password" type="password" autocomplete="new-password" data-regla="password" required maxlength="64">
+        <ul class="requisitos" id="requisitos" aria-live="polite"></ul>
+        <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+      </div>
+      <div class="campo" data-campo="confirmacion">
+        <label for="campo-confirmacion">Repite la contraseña</label>
+        <input id="campo-confirmacion" name="confirmacion" type="password" autocomplete="new-password" data-regla="confirmacion" required maxlength="64">
+        <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+      </div>
+
+      <button class="boton boton--bloque" type="submit">Crear cuenta {{ icono("flecha") }}</button>
+      <p class="nota-seguridad">{{ icono("candado") }}<span>La contraseña nunca se guarda: se guarda su hash scrypt con una sal aleatoria.</span></p>
+      <p>¿Ya tienes cuenta? <a href="{{ url_for('paginas.ingresar', siguiente=siguiente) }}">Ingresa</a></p>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>{% endblock %}

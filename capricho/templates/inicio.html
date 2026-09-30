@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+
+{% block contenido %}
+<section class="hero">
+  <div class="contenedor hero__rejilla">
+    <div class="hero__texto">
+      <p class="eyebrow">Aranjuez · Medellín</p>
+      <h1>Granizado de café artesanal</h1>
+      <p class="lead">Frío, cremoso y hecho a mano. Pídelo a domicilio o recógelo en la Cra. 50c # 92-84.</p>
+      <div class="hero__acciones">
+        <a class="boton" href="#arma">{{ icono("vaso") }} Arma el tuyo</a>
+        <a class="boton boton--contorno" href="#menu">Ver el menú</a>
+      </div>
+      <div class="hero__precios" id="hero-precios" aria-label="Precios por tamaño"></div>
+    </div>
+    <div class="hero__imagen">
+      <img class="hero__foto" src="{{ url_for('static', filename='img/capuchino.jpg') }}" width="720" height="661"
+           alt="Granizado Capricho sabor capuchino con crema batida y salsa de chocolate">
+    </div>
+  </div>
+</section>
+
+<section class="seccion" id="menu">
+  <div class="contenedor">
+    <div class="seccion__cabeza">
+      <p class="eyebrow">El menú</p>
+      <h2>Tres tamaños, doce antojos</h2>
+      <p>El mismo granizado de siempre, en el vaso que te alcance. Súmale hasta tres adiciones.</p>
+    </div>
+    <div class="menu-rejilla">
+      <div>
+        <div class="tamanos" id="menu-tamanos"></div>
+        <div class="adiciones-caja">
+          <div class="adiciones-caja__cabeza"><span>Adiciones</span><strong id="precio-adicion">$2.000</strong></div>
+          <ul class="adiciones-lista" id="menu-adiciones"></ul>
+        </div>
+      </div>
+      <figure class="menu-foto">
+        <img src="{{ url_for('static', filename='img/menu.jpg') }}" width="900" height="1083" loading="lazy"
+             alt="Menú impreso de Capricho con los tres tamaños, sus precios y las adiciones">
+        <figcaption>Así lo ves en el local.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="seccion seccion--papel" id="arma">
+  <div class="contenedor">
+    <div class="seccion__cabeza">
+      <p class="eyebrow">Arma el tuyo</p>
+      <h2>Tu Capricho, a tu manera</h2>
+    </div>
+    <div class="armador">
+      <form id="armador" novalidate>
+        <fieldset class="paso" id="paso-tamano">
+          <legend class="paso__titulo"><span class="paso__numero">1</span><h3>Tamaño</h3></legend>
+          <div class="opciones opciones--tamanos" id="opciones-tamano"></div>
+        </fieldset>
+        <fieldset class="paso" id="paso-sabor">
+          <legend class="paso__titulo"><span class="paso__numero">2</span><h3>Sabor</h3></legend>
+          <div class="opciones opciones--sabores" id="opciones-sabor"></div>
+        </fieldset>
+        <fieldset class="paso" id="paso-adiciones">
+          <legend class="paso__titulo"><span class="paso__numero">3</span><h3>Adiciones</h3><span class="muted" id="contador-adiciones">Hasta 3</span></legend>
+          <div class="opciones opciones--adiciones" id="opciones-adiciones"></div>
+        </fieldset>
+        <div class="paso">
+          <div class="paso__titulo"><span class="paso__numero">4</span><h3>Cantidad</h3></div>
+          <div class="cantidad" id="cantidad-armado">
+            <button type="button" data-delta="-1" aria-label="Quitar uno">{{ icono("menos") }}</button>
+            <output id="cantidad-valor" aria-live="polite">1</output>
+            <button type="button" data-delta="1" aria-label="Agregar uno">{{ icono("mas") }}</button>
+          </div>
+        </div>
+      </form>
+      <aside class="tarjeta resumen-armado" aria-live="polite">
+        <h3>Tu granizado</h3>
+        <ul class="lineas-precio" id="resumen-lineas"></ul>
+        <div class="total-grande"><span>Total</span><strong id="resumen-total">$0</strong></div>
+        <button class="boton boton--bloque" id="agregar-carrito" type="button">{{ icono("carrito") }} Agregar al carrito</button>
+        <p class="nota-seguridad">{{ icono("escudo") }}<span>Precios traídos del servidor. Al pagar se vuelven a calcular allá.</span></p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="promo" aria-labelledby="titulo-promo">
+  <div class="contenedor promo__rejilla">
+    <img src="{{ url_for('static', filename='img/cargador.jpg') }}" width="640" height="399" loading="lazy"
+         alt="Comparación divertida: un cargador de celular contra un granizado Capricho cargado de adiciones">
+    <div class="promo__texto">
+      <p class="eyebrow">Pa' la tarde</p>
+      <h2 id="titulo-promo">El cargador que sí funciona</h2>
+      <p>Cuando la batería no da más, un granizado grande con Chocorramo y WaferJet te pone al cien.</p>
+      <a class="boton boton--crema" href="#arma">Recargar ahora</a>
+    </div>
+  </div>
+</section>
+
+<section class="seccion" id="domicilios">
+  <div class="contenedor">
+    <div class="seccion__cabeza">
+      <p class="eyebrow">Domicilios</p>
+      <h2>Salimos de Aranjuez por la ruta más corta</h2>
+      <p>Cada barrio es un punto del mapa y cada vía tiene su distancia. Con el algoritmo de Dijkstra calculamos el camino más corto y de ahí sale la tarifa: $2.000 + $700 por km.</p>
+    </div>
+    <div class="domicilios">
+      <div class="tarjeta mapa-caja"><svg class="mapa" id="mapa-domicilios" viewBox="0 0 1000 700" role="img" aria-label="Mapa de barrios con las vías desde Aranjuez"></svg></div>
+      <div class="tarjeta ruta-info">
+        <div class="campo">
+          <label for="barrio-consulta">¿A qué barrio te lo llevamos?</label>
+          <select id="barrio-consulta"></select>
+        </div>
+        <div id="ruta-resultado"></div>
+        <details>
+          <summary><strong>Todas las tarifas</strong></summary>
+          <ul class="tarifas" id="lista-tarifas"></ul>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="seccion seccion--papel">
+  <div class="contenedor visitanos">
+    <img src="{{ url_for('static', filename='img/letrero-aranjuez.jpg') }}" width="668" height="899" loading="lazy"
+         alt="Letrero de Capricho en rayas vino: Granizado de café artesanal, Aranjuez, Cra. 50c # 92-84">
+    <div>
+      <p class="eyebrow">Visítanos</p>
+      <h2>Te esperamos en el barrio</h2>
+      <address>{{ icono("ubicacion") }} Cra. 50c # 92-84, Aranjuez, Medellín</address>
+      <p>Pide en línea y recógelo sin hacer fila: tu pedido entra a la cola de preparación apenas se aprueba el pago, y se atiende en el mismo orden en que llegó.</p>
+      <a class="boton" href="#arma">Hacer mi pedido</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/tienda.js') }}"></script>
+{% endblock %}

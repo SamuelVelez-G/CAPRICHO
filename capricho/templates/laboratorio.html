@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Laboratorio antifraude · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Para el profesor</p>
+    <h1>Laboratorio antifraude</h1>
+    <p>Envía pagos reales al endpoint <code class="mono">POST /api/transacciones</code>, con el formato de la diapositiva 40, y mira cómo responde el detector. Todo lo que mandes aparece en el dashboard.</p>
+  </div>
+</section>
+
+<div class="contenedor lab">
+  <div class="lab__col">
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Enviar una transacción</h2><p class="tarjeta__sub">Cada campo se valida en el servidor: prueba dejarlos vacíos o con datos raros.</p></div>
+      </div>
+      <form id="form-txn" novalidate>
+        <div class="fila-campos">
+          <div class="campo" data-campo="idTxn">
+            <label for="txn-id">idTxn</label>
+            <input id="txn-id" name="idTxn" type="text" autocomplete="off">
+          </div>
+          <div class="campo" data-campo="user">
+            <label for="txn-user">user</label>
+            <input id="txn-user" name="user" type="text" value="aa@aa.com" autocomplete="off">
+          </div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="date">
+            <label for="txn-date">date</label>
+            <input id="txn-date" name="date" type="text" autocomplete="off">
+            <span class="ayuda">Vacío = la hora exacta de cada envío.</span>
+          </div>
+          <div class="campo" data-campo="value">
+            <label for="txn-value">value</label>
+            <input id="txn-value" name="value" type="text" inputmode="decimal" value="50000" autocomplete="off">
+          </div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="paymentMethod">
+            <label for="txn-metodo">paymentMethod</label>
+            <select id="txn-metodo" name="paymentMethod">
+              <option>Tarjeta</option><option>Nequi</option><option>Daviplata</option><option>PSE</option><option>Efectivo</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="txn-firma">hash</label>
+            <select id="txn-firma" name="firma">
+              <option value="valida">Firmar con la llave correcta</option>
+              <option value="alterar">Firmar y después alterar el valor</option>
+              <option value="inventada">Hash inventado (64 hex al azar)</option>
+              <option value="nula">Sin hash (null)</option>
+            </select>
+          </div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo">
+            <label for="txn-repetir">Repetir</label>
+            <input id="txn-repetir" name="repetir" type="number" min="1" max="20" value="1">
+            <span class="ayuda">Mismo usuario, idTxn consecutivos.</span>
+          </div>
+          <div class="campo">
+            <label for="txn-intervalo">Cada (ms)</label>
+            <input id="txn-intervalo" name="intervalo" type="number" min="0" max="10000" step="50" value="0">
+            <span class="ayuda">0 = todas en el mismo segundo.</span>
+          </div>
+        </div>
+        <p class="etiqueta">Cuerpo que se enviará</p>
+        <pre class="codigo-bloque" id="vista-previa"></pre>
+        <p></p>
+        <button class="boton boton--bloque" type="submit">{{ icono("enviar") }} Enviar POST /api/transacciones</button>
+      </form>
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">JSON libre</h2><p class="tarjeta__sub">Para probar cualquier cosa: nulos, tipos equivocados, inyección, listas para el lote.</p></div>
+      </div>
+      <div class="campo">
+        <label for="json-destino">Destino</label>
+        <select id="json-destino">
+          <option value="/api/transacciones">POST /api/transacciones</option>
+          <option value="/api/transacciones/lote">POST /api/transacciones/lote (lista, se ordena con merge sort)</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="json-libre">Cuerpo</label>
+        <textarea id="json-libre" rows="9" spellcheck="false"></textarea>
+      </div>
+      <div class="hero__acciones">
+        <button class="boton boton--sm" id="enviar-json" type="button">{{ icono("enviar") }} Enviar</button>
+        <button class="boton boton--contorno boton--sm" id="firmar-json" type="button">{{ icono("llave") }} Firmar el objeto</button>
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">Firmar desde Python (diapositiva 19)</h2>
+      <p class="tarjeta__sub">Para enviar desde Postman o un script, la firma se calcula así. La llave está en el README (variable <code class="mono">CAPRICHO_LLAVE_HMAC</code>).</p>
+      <pre class="codigo-bloque">import hashlib, hmac, json, urllib.request
+
+LLAVE = b"&lt;llave del README&gt;"
+txn = {"idTxn": 10001, "user": "aa@aa.com",
+       "date": "2026-09-23T10:30:01.120",
+       "value": 50000, "paymentMethod": "Tarjeta"}
+datos = json.dumps(txn, sort_keys=True, separators=(",", ":"))
+txn["hash"] = hmac.new(LLAVE, datos.encode(), hashlib.sha256).hexdigest()
+
+peticion = urllib.request.Request(
+    "http://127.0.0.1:5000/api/transacciones",
+    data=json.dumps(txn).encode(),
+    headers={"Content-Type": "application/json"})
+print(urllib.request.urlopen(peticion).read().decode())</pre>
+      <p class="tarjeta__sub">También está <code class="mono">herramientas/enviar_transacciones.py</code> para hacerlo desde la terminal.</p>
+    </section>
+  </div>
+
+  <div class="lab__col">
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Escenarios de las diapositivas</h2><p class="tarjeta__sub">Cada uno usa un correo nuevo para no mezclarse con pruebas anteriores.</p></div>
+      </div>
+      <div class="escenarios" id="escenarios"></div>
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza">
+        <h2 class="tarjeta__titulo">Reglas activas</h2>
+        {% if usuario and usuario.rol == 'ADMIN' %}<a class="boton boton--xs boton--contorno" href="{{ url_for('paginas.dashboard') }}#reglas">Cambiar</a>{% endif %}
+      </div>
+      <div class="reglas-activas" id="reglas-activas"></div>
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Consola</h2><p class="tarjeta__sub">Petición y respuesta de cada envío, la más reciente arriba.</p></div>
+        <button class="boton boton--xs boton--contorno" id="limpiar-consola" type="button">Limpiar</button>
+      </div>
+      <div class="consola" id="consola"><p class="muted">Aún no has enviado nada.</p></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/laboratorio.js') }}"></script>{% endblock %}

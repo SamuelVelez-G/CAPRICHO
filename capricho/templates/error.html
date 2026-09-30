@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Error {{ codigo }} · Capricho{% endblock %}
+{% block contenido %}
+<section class="seccion">
+  <div class="contenedor">
+    <p class="eyebrow">Error {{ codigo }}</p>
+    <h1>{% if codigo == 404 %}Este vaso está vacío{% else %}Algo se derritió{% endif %}</h1>
+    <p>{% if codigo == 404 %}La página que buscas no existe.{% else %}Ocurrió un problema ({{ mensaje }}). Quedó registrado en el log.{% endif %}</p>
+    <a class="boton" href="{{ url_for('paginas.inicio') }}">Volver al inicio</a>
+  </div>
+</section>
+{% endblock %}

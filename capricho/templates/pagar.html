@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Pagar · Capricho{% endblock %}
+{% block contenido %}
+<div class="contenedor pagar">
+  <div id="zona-formulario">
+    <p class="eyebrow">Último paso</p>
+    <h1>Confirma tu pedido</h1>
+
+    {% if not usuario %}
+      <div class="aviso aviso--alerta bloque">{{ icono("usuario") }}
+        <p>Para pagar necesitas una cuenta. <a href="{{ url_for('paginas.ingresar', siguiente='/pagar') }}">Ingresa</a> o <a href="{{ url_for('paginas.registro', siguiente='/pagar') }}">crea una en un minuto</a>. Tu carrito queda guardado.</p>
+      </div>
+    {% endif %}
+
+    <div class="aviso aviso--error bloque" id="error-general" role="alert" hidden>{{ icono("bloqueo") }}<div></div></div>
+
+    <form id="form-pagar" novalidate {% if not usuario %}aria-disabled="true"{% endif %}>
+      <section class="tarjeta bloque">
+        <h2>Entrega</h2>
+        <div class="opciones opciones--entrega bloque" data-campo="tipo_entrega">
+          <label class="opcion"><input type="radio" name="tipo_entrega" value="DOMICILIO" checked>
+            <span class="opcion__cuerpo">{{ icono("moto") }}<span><strong>A domicilio</strong><br><small class="muted">Ruta más corta desde Aranjuez</small></span></span></label>
+          <label class="opcion"><input type="radio" name="tipo_entrega" value="RECOGER">
+            <span class="opcion__cuerpo">{{ icono("tienda") }}<span><strong>Recoger en tienda</strong><br><small class="muted">Cra. 50c # 92-84 · sin costo</small></span></span></label>
+        </div>
+        <div id="campos-domicilio">
+          <div class="fila-campos">
+            <div class="campo" data-campo="barrio">
+              <label for="campo-barrio">Barrio</label>
+              <select id="campo-barrio" name="barrio" data-regla="requerido" required><option value="">Elige tu barrio</option></select>
+              <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+            </div>
+            <div class="campo" data-campo="direccion">
+              <label for="campo-direccion">Dirección</label>
+              <input id="campo-direccion" name="direccion" type="text" autocomplete="street-address" data-regla="direccion" required maxlength="120" placeholder="Calle 58 # 50-20, apto 301">
+              <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+            </div>
+          </div>
+          <div id="ruta-pedido"></div>
+        </div>
+      </section>
+
+      <section class="tarjeta bloque">
+        <h2>Pago</h2>
+        <div class="opciones opciones--pago" data-campo="metodo_pago" id="metodos-pago"></div>
+        <p class="nota-seguridad">{{ icono("info") }}<span>Pago simulado para el proyecto. La transacción se firma con HMAC-SHA256 y pasa por el mismo detector antifraude que el laboratorio.</span></p>
+      </section>
+
+      <button class="boton boton--bloque" type="submit" id="boton-pagar" {% if not usuario %}disabled{% endif %}>{{ icono("candado") }} <span>Pagar</span></button>
+    </form>
+  </div>
+
+  <aside class="tarjeta">
+    <h2>Resumen</h2>
+    <ul class="lineas-precio" id="resumen-pedido"></ul>
+    <ul class="lineas-precio">
+      <li><span>Subtotal</span><span id="resumen-subtotal">$0</span></li>
+      <li><span>Domicilio</span><span id="resumen-domicilio">—</span></li>
+    </ul>
+    <div class="total-grande"><span>Total</span><strong id="resumen-total">$0</strong></div>
+    <details>
+      <summary><strong>Para el profesor: prueba alterar el precio</strong></summary>
+      <p class="muted">Abre las herramientas del navegador (F12) → Aplicación → Local Storage → <code class="mono">capricho_carrito</code> y cambia un <code class="mono">precio_unitario</code>. Luego paga sin recargar: el servidor recalcula, rechaza la compra y el intento aparece en el dashboard como <strong>PRECIO_MANIPULADO</strong>. Si recargas, la página detecta el cambio y restaura los precios oficiales.</p>
+    </details>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/pagar.js') }}"></script>{% endblock %}

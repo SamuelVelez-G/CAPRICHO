@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Ingresar · Capricho{% endblock %}
+{% block contenido %}
+<div class="pagina-dividida">
+  <div class="pagina-dividida__arte">
+    <img src="{{ url_for('static', filename='img/letrero-aranjuez.jpg') }}" width="668" height="899" alt="Letrero de Capricho en Aranjuez">
+  </div>
+  <div class="pagina-dividida__form">
+    <form class="formulario" id="form-ingresar" novalidate data-siguiente="{{ siguiente }}">
+      <p class="eyebrow">Bienvenido de vuelta</p>
+      <h1>Ingresar</h1>
+      <div class="aviso aviso--error" id="error-general" role="alert" hidden>{{ icono("bloqueo") }}<p></p></div>
+
+      <div class="campo" data-campo="email">
+        <label for="campo-email">Correo</label>
+        <input id="campo-email" name="email" type="email" autocomplete="email" data-regla="email" required maxlength="120">
+        <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+      </div>
+      <div class="campo" data-campo="password">
+        <label for="campo-password">Contraseña</label>
+        <input id="campo-password" name="password" type="password" autocomplete="current-password" data-regla="requerido" required maxlength="64">
+        <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+      </div>
+
+      <button class="boton boton--bloque" type="submit">Ingresar {{ icono("flecha") }}</button>
+      <p class="nota-seguridad">{{ icono("candado") }}<span>Tu contraseña se verifica contra un hash scrypt con sal. Después de 5 intentos fallidos el acceso se bloquea 5 minutos.</span></p>
+      <p>¿No tienes cuenta? <a href="{{ url_for('paginas.registro', siguiente=siguiente) }}">Regístrate</a></p>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>{% endblock %}
