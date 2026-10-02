@@ -28,7 +28,34 @@ class CasosDeUso(PruebaCapricho):
         respuestas = [self.enviar_txn(f"u{n}@u.com", self.a_las(10, 0, n)) for n in (1, 2, 3)]
         self.assertEqual(self.estados(respuestas), ["APROBADA"] * 3)
 
-    def test_diapositiva_39_cada_cuatro_segundos_es_normal(self):
+    def test_por_defecto_aplican_las_franjas_de_la_diapositiva_38(self):
+        # Mañana: ventana de 10 s, así que 1, 5 y 9 caen juntas.
+        manana = [self.enviar_txn("m1@b.com", self.a_las(10, 0, s)) for s in (1, 5, 9)]
+        self.assertEqual(self.estados(manana)[-1], "SOSPECHOSA")
+        # Tarde-noche: ventana de 6 s. 1, 5 y 9 no caben juntas; 1, 4 y 6 sí.
+        tarde = [self.enviar_txn("t1@b.com", self.a_las(19, 0, s)) for s in (1, 5, 9)]
+        self.assertEqual(self.estados(tarde), ["APROBADA"] * 3)
+        tarde = [self.enviar_txn("t2@b.com", self.a_las(19, 0, s)) for s in (1, 4, 6)]
+        self.assertEqual(self.estados(tarde)[-1], "SOSPECHOSA")
+        # Noche: ventana de 3 s. 1, 3 y 5 no caben juntas; 1, 2 y 3 sí.
+        noche = [self.enviar_txn("n1@b.com", self.a_las(21, 0, s)) for s in (1, 3, 5)]
+        self.assertEqual(self.estados(noche), ["APROBADA"] * 3)
+        noche = [self.enviar_txn("n2@b.com", self.a_las(21, 0, s)) for s in (1, 2, 3)]
+        self.assertEqual(self.estados(noche)[-1], "SOSPECHOSA")
+
+    def test_bordes_de_las_franjas(self):
+        # 12:00:00 todavía es mañana (10 s); 12:00:01 ya es tarde (6 s).
+        from capricho.servicios.detector import REGLAS_POR_DEFECTO, regla_aplicable
+        self.assertEqual(regla_aplicable(REGLAS_POR_DEFECTO, self.a_las(12, 0, 0))["ventana_segundos"], 10)
+        self.assertEqual(regla_aplicable(REGLAS_POR_DEFECTO, self.a_las(12, 0, 1))["ventana_segundos"], 6)
+        self.assertEqual(regla_aplicable(REGLAS_POR_DEFECTO, self.a_las(20, 0, 0))["ventana_segundos"], 6)
+        self.assertEqual(regla_aplicable(REGLAS_POR_DEFECTO, self.a_las(20, 0, 1))["ventana_segundos"], 3)
+        self.assertEqual(regla_aplicable(REGLAS_POR_DEFECTO, self.a_las(5, 0, 0))["ventana_segundos"], 3)
+        self.assertEqual(regla_aplicable(REGLAS_POR_DEFECTO, self.a_las(5, 0, 1))["ventana_segundos"], 10)
+
+    def test_diapositiva_39_con_la_regla_fija(self):
+        self.como_admin()
+        self.enviar_json("PATCH", "/api/configuracion", {"modo": "FIJA"})
         respuestas = [self.enviar_txn("b@b.com", self.a_las(10, 0, s)) for s in (1, 5, 9)]
         self.assertEqual(self.estados(respuestas), ["APROBADA"] * 3)
 
@@ -178,6 +205,7 @@ class Configuracion(PruebaCapricho):
         self.como_admin()
         respuesta = self.enviar_json("PATCH", "/api/configuracion", {"modo": "FRANJAS"})
         self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.get_json()["reglas"]["modo"], "FRANJAS")
         # En la mañana la ventana es de 10 s: 1, 5 y 9 ahora sí caen juntas.
         estados = [self.enviar_txn("f@f.com", self.a_las(10, 0, s)).get_json()["transaccion"]["estado"]
                    for s in (1, 5, 9)]

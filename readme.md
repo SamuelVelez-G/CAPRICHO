@@ -152,18 +152,20 @@ rutas alternativas `/transacciones` y `/api/transactions`.
 
 ### Reglas configurables (PUT y PATCH en `/api/configuracion` o desde el dashboard)
 
-- **Regla principal** (por defecto, diapositiva 39): 3 o más transacciones en 3 segundos.
-- **Por franja horaria** (diapositiva 38): mañana (05:00:01–12:00:00), tarde-noche (12:00:01–20:00:00) y noche-madrugada (20:00:01–05:00:00), cada una con **su ventana y su umbral**.
+- **Por franja horaria** (por defecto, diapositiva 38): la ventana depende de la
+  hora de la transacción, con el umbral de la diapositiva 39 (3 o más):
 
-> La diapositiva 38 dice "venta de 10 / 6 / 3". Lo interpretamos como la
-> **ventana** en segundos (10, 6 y 3) con umbral 3, porque la diapositiva 36
-> habla de "una ventana de x (configurable) segundos". Como cada franja también
-> tiene su propio umbral, si la intención era "10, 6 y 3 transacciones" basta
-> con poner esos valores en el umbral desde el dashboard.
+  | Franja | Horario | Ventana |
+  |---|---|---|
+  | Mañana | 05:00:01 a 12:00:00 | 10 s |
+  | Tarde-noche | 12:00:01 a 20:00:00 | 6 s |
+  | Noche-madrugada | 20:00:01 a 05:00:00 | 3 s |
 
-Por defecto queda la regla principal porque con ella se cumplen al pie de la
-letra los ejemplos de las diapositivas 39 y 42 (a las 10:00 con franjas, la
-ventana de 10 s convertiría en anomalía el ejemplo "normal" de 10:00:01, :05 y :09).
+  La diapositiva dice "venta de 10 / 6 / 3": el profesor confirmó que es "ventana".
+- **Regla fija** (diapositiva 39): 3 o más transacciones en 3 segundos a cualquier hora.
+
+Cada franja tiene su ventana y su umbral editables desde el dashboard. La franja
+se elige con la hora de la transacción que llega (campo `date`).
 
 ### Cómo se verifica el hash
 

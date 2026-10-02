@@ -183,7 +183,7 @@ const ESCENARIOS = [
   },
   {
     nombre: "Diapositiva 39 · Cada 4 segundos", detalle: "10:00:01, :05 y :09",
-    esperado: "APROBADAS con la regla principal (3 s); SOSPECHOSA si activas las franjas (10 s en la mañana)",
+    esperado: "con las franjas la tercera queda SOSPECHOSA (en la mañana la ventana es de 10 s); con la regla fija de 3 s, las tres APROBADAS",
     async correr(s) {
       for (const seg of [1, 5, 9]) await mandar(`b2+${s}@b.com`, hoyA(10, 0, seg));
     },

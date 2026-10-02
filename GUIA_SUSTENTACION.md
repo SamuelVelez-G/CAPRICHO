@@ -68,6 +68,11 @@ $env:CAPRICHO_LLAVES_EXTRA = "la_llave_del_profe"
 python run.py
 ```
 
+**Ojo con la hora:** si el generador usa la hora real, hasta las 20:00 se aplica
+la ventana de 6 segundos (tarde-noche) y desde las 20:00:01 la de 3 segundos
+(noche). Si el profesor pide la regla fija de 3 en 3 segundos: dashboard →
+"Reglas de detección" → "Regla principal" → "PATCH · solo cambios".
+
 ## 3. Qué se cumple y dónde (diapositivas 35 a 45)
 
 | Pide | Está en |
@@ -122,8 +127,17 @@ Bajo: monto atípico. Medio: justo en el umbral (3 en 3 s). Alto: por encima del
 **¿Una transacción con hash inválido cuenta en la ventana?**
 Sí. Los datos no son confiables, pero el intento ocurrió. Queda RECHAZADA por el hash y, si además completa la ventana, también se marca posible fraude.
 
-**La diapositiva 38 dice "venta de 10 / 6 / 3", ¿qué hicieron?**
-Lo tomamos como la ventana en segundos por franja horaria. Cada franja tiene ventana y umbral editables en el dashboard, así que si la intención era 10, 6 y 3 transacciones, se cambia sin tocar código. Por defecto dejamos la regla de la diapositiva 39 (3 en 3 s) porque con ella los ejemplos de las diapositivas 39 y 42 dan exactamente lo esperado.
+**¿Cómo funcionan las franjas de la diapositiva 38?**
+La ventana depende de la hora que trae la transacción: mañana (05:00:01 a 12:00:00) 10 segundos, tarde-noche (12:00:01 a 20:00:00) 6 segundos, noche-madrugada (20:00:01 a 05:00:00) 3 segundos. El umbral es el de la diapositiva 39: 3 o más. Es lo que viene activo por defecto. La diapositiva decía "venta", pero era "ventana".
+
+**¿Por qué la ventana es más grande en la mañana?**
+Es lo que pide la diapositiva. Una ventana más grande es más estricta: con 10 segundos, tres compras separadas 4 segundos ya son sospechosas; con 3 segundos no lo serían.
+
+**¿Qué pasa si una ráfaga queda entre dos franjas, por ejemplo 11:59:58 y 12:00:02?**
+Se usa la franja de la transacción que está llegando. La que llega a las 12:00:02 se evalúa con la ventana de la tarde (6 s), y mira hacia atrás 6 segundos aunque eso cruce las 12:00.
+
+**¿Y la regla de "3 en 3 segundos" de la diapositiva 39?**
+Está como "Regla fija" en el dashboard. Si el profesor pide probar con esa, se cambia con un clic (es un PATCH a `/api/configuracion`) y aplica desde la siguiente transacción.
 
 **¿Cómo cambian la configuración? ¿Diferencia entre PUT y PATCH?**
 Dashboard → "Reglas de detección". PUT reemplaza toda la configuración: si falta un campo, responde 422. PATCH manda solo lo que cambió.

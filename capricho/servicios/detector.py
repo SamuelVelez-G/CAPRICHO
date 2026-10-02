@@ -31,11 +31,12 @@ from ..tiempo import a_texto, ahora, desde_texto
 from ..validaciones import validar_transaccion
 from . import usuarios
 
-# Regla principal de la diapositiva 39: 3 o más transacciones en 3 segundos.
-# Las franjas de la diapositiva 38 quedan listas para activarse (modo FRANJAS);
-# cada franja tiene su propia ventana y su propio umbral.
+# Diapositiva 38 ("venta" es "ventana": lo confirmó el profesor): la ventana
+# depende de la hora de la transacción. Mañana 10 s, tarde-noche 6 s y
+# noche-madrugada 3 s, con el umbral de la diapositiva 39: 3 o más.
+# El modo FIJA deja una sola ventana para todo el día (la de la diapositiva 39).
 REGLAS_POR_DEFECTO = {
-    "modo": "FIJA",
+    "modo": "FRANJAS",
     "regla_fija": {"ventana_segundos": 3, "umbral": 3},
     "franjas": [
         {"clave": "manana", "nombre": "Mañana", "desde": "05:00:00", "hasta": "12:00:00",
