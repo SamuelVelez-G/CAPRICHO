@@ -1,7 +1,10 @@
 """
 Estadísticas del dashboard (diapositiva 44).
 
-Todas las fechas usan `fecha_txn`: el momento en que ocurrió la transacción.
+Por defecto se cuenta con `fecha_txn` (cuándo ocurrió la transacción, según
+el emisor). Con por="llegada" se cuenta con `fecha_creacion` (cuándo llegó al
+servidor): útil en la prueba en vivo si el generador usa fechas pasadas.
+El nombre de la columna sale de un diccionario fijo, nunca del usuario.
 Cada bloque es una consulta agregada; SQLite hace el conteo y Python solo
 arma la respuesta.
 """
@@ -15,6 +18,7 @@ from ..tiempo import a_texto, ahora, desde_texto
 from . import detector
 
 RANGOS = {"hoy": 1, "7d": 7, "30d": 30, "90d": 90, "todo": None}
+COLUMNAS = {"txn": "t.fecha_txn", "llegada": "t.fecha_creacion"}
 UNION_ANOMALIAS = "FROM anomalias a JOIN transacciones t ON t.id = a.transaccion_id"
 
 
@@ -38,7 +42,8 @@ def _variacion(actual, anterior):
     return round((actual - anterior) / anterior * 100, 1)
 
 
-def resumen(db, estado, rango="30d"):
+def resumen(db, estado, rango="30d", por="txn"):
+    col = COLUMNAS[por]
     momento = ahora()
     desde_dt, anterior_dt = limites(rango, momento)
     desde = a_texto(desde_dt) if desde_dt else "0000"
@@ -52,19 +57,19 @@ def resumen(db, estado, rango="30d"):
     # --- Hoy | Esta semana | Este mes -------------------------------------
     minimo = min(periodos.values())
     txn_periodos = db.execute(
-        """SELECT COALESCE(SUM(fecha_txn >= :hoy), 0), COALESCE(SUM(fecha_txn >= :semana), 0),
-                  COALESCE(SUM(fecha_txn >= :mes), 0)
-           FROM transacciones WHERE fecha_txn >= :minimo""", {**periodos, "minimo": minimo}).fetchone()
+        f"""SELECT COALESCE(SUM({col} >= :hoy), 0), COALESCE(SUM({col} >= :semana), 0),
+                   COALESCE(SUM({col} >= :mes), 0)
+            FROM transacciones t WHERE {col} >= :minimo""", {**periodos, "minimo": minimo}).fetchone()
     anom_periodos = db.execute(
-        f"""SELECT COALESCE(SUM(t.fecha_txn >= :hoy), 0), COALESCE(SUM(t.fecha_txn >= :semana), 0),
-                   COALESCE(SUM(t.fecha_txn >= :mes), 0)
-            {UNION_ANOMALIAS} WHERE t.fecha_txn >= :minimo""", {**periodos, "minimo": minimo}).fetchone()
+        f"""SELECT COALESCE(SUM({col} >= :hoy), 0), COALESCE(SUM({col} >= :semana), 0),
+                   COALESCE(SUM({col} >= :mes), 0)
+            {UNION_ANOMALIAS} WHERE {col} >= :minimo""", {**periodos, "minimo": minimo}).fetchone()
 
     # --- Totales del rango ----------------------------------------------
     estados = {fila["estado"]: {"cantidad": fila["cantidad"], "valor": fila["valor"]}
                for fila in db.execute(
-                   """SELECT estado, COUNT(*) AS cantidad, COALESCE(SUM(valor), 0) AS valor
-                      FROM transacciones WHERE fecha_txn >= ? GROUP BY estado""", (desde,))}
+                   f"""SELECT t.estado, COUNT(*) AS cantidad, COALESCE(SUM(t.valor), 0) AS valor
+                       FROM transacciones t WHERE {col} >= ? GROUP BY t.estado""", (desde,))}
     for nombre in ("APROBADA", "SOSPECHOSA", "RECHAZADA"):
         estados.setdefault(nombre, {"cantidad": 0, "valor": 0})
     total_txn = sum(e["cantidad"] for e in estados.values())
@@ -72,43 +77,50 @@ def resumen(db, estado, rango="30d"):
     fila = db.execute(
         f"""SELECT COUNT(*) AS anomalias, COUNT(DISTINCT a.transaccion_id) AS txn_con_anomalia,
                    COUNT(DISTINCT t.usuario_id) AS usuarios_afectados
-            {UNION_ANOMALIAS} WHERE t.fecha_txn >= ?""", (desde,)).fetchone()
+            {UNION_ANOMALIAS} WHERE {col} >= ?""", (desde,)).fetchone()
     usuarios_activos = db.execute(
-        "SELECT COUNT(DISTINCT usuario_id) FROM transacciones WHERE fecha_txn >= ?", (desde,)).fetchone()[0]
+        f"SELECT COUNT(DISTINCT t.usuario_id) FROM transacciones t WHERE {col} >= ?", (desde,)).fetchone()[0]
 
     tendencia = {"transacciones": None, "anomalias": None}
     if anterior_dt:
         previas = db.execute(
-            "SELECT COUNT(*) FROM transacciones WHERE fecha_txn >= ? AND fecha_txn < ?",
+            f"SELECT COUNT(*) FROM transacciones t WHERE {col} >= ? AND {col} < ?",
             (a_texto(anterior_dt), desde)).fetchone()[0]
         previas_anom = db.execute(
-            f"SELECT COUNT(*) {UNION_ANOMALIAS} WHERE t.fecha_txn >= ? AND t.fecha_txn < ?",
+            f"SELECT COUNT(*) {UNION_ANOMALIAS} WHERE {col} >= ? AND {col} < ?",
             (a_texto(anterior_dt), desde)).fetchone()[0]
         tendencia = {"transacciones": _variacion(total_txn, previas),
                      "anomalias": _variacion(fila["anomalias"], previas_anom)}
 
     por_estado_anomalia = {e: 0 for e in ("NUEVA", "ABIERTA", "REVISADA", "DESCARTADA")}
-    for f in db.execute(f"SELECT a.estado, COUNT(*) {UNION_ANOMALIAS} WHERE t.fecha_txn >= ? GROUP BY a.estado",
+    for f in db.execute(f"SELECT a.estado, COUNT(*) {UNION_ANOMALIAS} WHERE {col} >= ? GROUP BY a.estado",
                         (desde,)):
         por_estado_anomalia[f[0]] = f[1]
 
     por_nivel = {n: 0 for n in detector.NIVELES}
-    for f in db.execute(f"SELECT a.nivel, COUNT(*) {UNION_ANOMALIAS} WHERE t.fecha_txn >= ? GROUP BY a.nivel",
+    for f in db.execute(f"SELECT a.nivel, COUNT(*) {UNION_ANOMALIAS} WHERE {col} >= ? GROUP BY a.nivel",
                         (desde,)):
         por_nivel[f[0]] = f[1]
 
     por_tipo = [{"tipo": f[0], "nombre": detector.TIPOS_ANOMALIA.get(f[0], f[0]), "cantidad": f[1]}
                 for f in db.execute(
-                    f"""SELECT a.tipo, COUNT(*) AS n {UNION_ANOMALIAS} WHERE t.fecha_txn >= ?
+                    f"""SELECT a.tipo, COUNT(*) AS n {UNION_ANOMALIAS} WHERE {col} >= ?
                         GROUP BY a.tipo ORDER BY n DESC""", (desde,))]
 
     metodos = filas_a_dicts(db.execute(
-        """SELECT metodo_pago AS metodo, COUNT(*) AS cantidad,
-                  SUM(estado != 'APROBADA') AS sospechosas, COALESCE(SUM(valor), 0) AS valor
-           FROM transacciones WHERE fecha_txn >= ? GROUP BY metodo_pago ORDER BY cantidad DESC""", (desde,)))
+        f"""SELECT t.metodo_pago AS metodo, COUNT(*) AS cantidad,
+                   SUM(t.estado != 'APROBADA') AS sospechosas, COALESCE(SUM(t.valor), 0) AS valor
+            FROM transacciones t WHERE {col} >= ? GROUP BY t.metodo_pago ORDER BY cantidad DESC""", (desde,)))
+
+    firmas = {}
+    for f in db.execute(f"""SELECT t.firma, t.hash_valido, t.origen, COUNT(*) FROM transacciones t
+                            WHERE {col} >= ? GROUP BY 1, 2, 3""", (desde,)):
+        nombre = _nombre_firma(f[0], f[1], f[2])
+        firmas[nombre] = firmas.get(nombre, 0) + f[3]
 
     return {
         "rango": rango,
+        "por": por,
         "generado": a_texto(momento),
         "periodos": {
             "transacciones": dict(zip(("hoy", "semana", "mes"), txn_periodos)),
@@ -131,29 +143,44 @@ def resumen(db, estado, rango="30d"):
         "por_nivel": por_nivel,
         "por_tipo": por_tipo,
         "metodos": metodos,
-        "serie": _serie(db, rango, desde_dt, momento),
-        "calor": _mapa_de_calor(db, desde),
-        "recurrentes": _recurrentes(db, desde),
-        "multiples": _multiples(db, desde),
-        "ultimas_aprobadas": _ultimas(db, desde, ("APROBADA",)),
-        "ultimas_sospechosas": _ultimas(db, desde, ("SOSPECHOSA", "RECHAZADA")),
-        "mayor_sospechosa": _mayor_sospechosa(db, desde),
+        "firmas": sorted(({"firma": k, "cantidad": v} for k, v in firmas.items()), key=lambda x: -x["cantidad"]),
+        "serie": _serie(db, rango, desde_dt, momento, col),
+        "calor": _mapa_de_calor(db, desde, col),
+        "recurrentes": _recurrentes(db, desde, col),
+        "multiples": _multiples(db, desde, col),
+        "ultimas_aprobadas": _ultimas(db, desde, ("APROBADA",), col),
+        "ultimas_sospechosas": _ultimas(db, desde, ("SOSPECHOSA", "RECHAZADA"), col),
+        "mayor_sospechosa": _mayor_sospechosa(db, desde, col),
         "eventos": {"total": len(estado.pila_errores), "cima": estado.pila_errores.elementos()[:8]},
         "cola_pedidos": len(estado.cola_pedidos),
         "reglas": detector.cargar_reglas(db),
     }
 
 
-def _serie(db, rango, desde_dt, momento):
+def _nombre_firma(firma, valido, origen):
+    if not valido:
+        return "Hash inválido"
+    if origen in ("TIENDA", "DEMO") or not firma:
+        return "Firmadas por la tienda o la demo"
+    if firma.startswith("SHA-256"):
+        return "SHA-256 sin llave"
+    if "diapositiva" in firma:
+        return "HMAC con la llave de la diapositiva 19"
+    if "propia" in firma:
+        return "HMAC con la llave propia"
+    return "HMAC con llave extra"
+
+
+def _serie(db, rango, desde_dt, momento, col):
     """Transacciones por día (o por hora si el rango es 'hoy') según estado,
     más las anomalías de cada tramo. Marca los picos repentinos."""
     if rango == "hoy":
-        tramo = "substr(t.fecha_txn, 1, 13)"          # 2026-09-29T14
+        tramo = f"substr({col}, 1, 13)"               # 2026-09-29T14
         claves = [a_texto(desde_dt + timedelta(hours=h))[:13] for h in range(momento.hour + 1)]
     else:
-        tramo = "substr(t.fecha_txn, 1, 10)"          # 2026-09-29
+        tramo = f"substr({col}, 1, 10)"               # 2026-09-29
         if desde_dt is None:
-            primera = db.execute("SELECT MIN(fecha_txn) FROM transacciones").fetchone()[0]
+            primera = db.execute(f"SELECT MIN({col}) FROM transacciones t").fetchone()[0]
             desde_dt = _inicio_del_dia(desde_texto(primera)) if primera else _inicio_del_dia(momento)
         dias = (_inicio_del_dia(momento) - desde_dt).days + 1
         claves = [a_texto(desde_dt + timedelta(days=d))[:10] for d in range(dias)]
@@ -162,11 +189,11 @@ def _serie(db, rango, desde_dt, momento):
     base = {c: {"tramo": c, "APROBADA": 0, "SOSPECHOSA": 0, "RECHAZADA": 0, "anomalias": 0} for c in claves}
     for fila in db.execute(
             f"""SELECT {tramo} AS tramo, t.estado, COUNT(*) FROM transacciones t
-                WHERE t.fecha_txn >= ? GROUP BY tramo, t.estado""", (desde,)):
+                WHERE {col} >= ? GROUP BY tramo, t.estado""", (desde,)):
         if fila[0] in base:
             base[fila[0]][fila[1]] = fila[2]
     for fila in db.execute(
-            f"SELECT {tramo} AS tramo, COUNT(*) {UNION_ANOMALIAS} WHERE t.fecha_txn >= ? GROUP BY tramo", (desde,)):
+            f"SELECT {tramo} AS tramo, COUNT(*) {UNION_ANOMALIAS} WHERE {col} >= ? GROUP BY tramo", (desde,)):
         if fila[0] in base:
             base[fila[0]]["anomalias"] = fila[1]
 
@@ -181,12 +208,12 @@ def _serie(db, rango, desde_dt, momento):
     return {"unidad": "hora" if rango == "hoy" else "dia", "puntos": serie}
 
 
-def _mapa_de_calor(db, desde):
+def _mapa_de_calor(db, desde, col):
     """Anomalías por día de la semana (0 = domingo en SQLite) y hora."""
     celdas = [[0] * 24 for _ in range(7)]
     for fila in db.execute(
-            f"""SELECT CAST(strftime('%w', t.fecha_txn) AS INTEGER), CAST(substr(t.fecha_txn, 12, 2) AS INTEGER),
-                       COUNT(*) {UNION_ANOMALIAS} WHERE t.fecha_txn >= ? GROUP BY 1, 2""", (desde,)):
+            f"""SELECT CAST(strftime('%w', {col}) AS INTEGER), CAST(substr({col}, 12, 2) AS INTEGER),
+                       COUNT(*) {UNION_ANOMALIAS} WHERE {col} >= ? GROUP BY 1, 2""", (desde,)):
         celdas[fila[0]][fila[1]] = fila[2]
     # Se reordena para empezar en lunes.
     celdas = celdas[1:] + celdas[:1]
@@ -196,47 +223,47 @@ def _mapa_de_calor(db, desde):
             "por_hora": por_hora, "horas_pico": [{"hora": h, "anomalias": por_hora[h]} for h in top if por_hora[h]]}
 
 
-def _recurrentes(db, desde):
+def _recurrentes(db, desde, col):
     """Usuarios reincidentes: los que acumulan más anomalías en el rango."""
     return filas_a_dicts(db.execute(
         f"""SELECT u.id, u.nombre, u.email, u.estado,
                    COUNT(a.id) AS anomalias,
                    COUNT(DISTINCT a.tipo) AS tipos_distintos,
                    MAX(t.fecha_txn) AS ultima,
-                   (SELECT COUNT(*) FROM transacciones x WHERE x.usuario_id = u.id AND x.fecha_txn >= :desde)
-                       AS transacciones
+                   (SELECT COUNT(*) FROM transacciones x WHERE x.usuario_id = u.id
+                       AND {col.replace("t.", "x.")} >= :desde) AS transacciones
             {UNION_ANOMALIAS} JOIN usuarios u ON u.id = t.usuario_id
-            WHERE t.fecha_txn >= :desde
+            WHERE {col} >= :desde
             GROUP BY u.id HAVING COUNT(a.id) >= 2
             ORDER BY anomalias DESC, transacciones DESC LIMIT 8""", {"desde": desde}))
 
 
-def _multiples(db, desde):
+def _multiples(db, desde, col):
     """Últimos casos de múltiples transacciones en la ventana."""
     return filas_a_dicts(db.execute(
         f"""SELECT a.id, a.tipo, a.nivel, a.cantidad_transacciones, a.ventana_segundos, a.estado,
                    t.fecha_txn, t.id_txn, u.email
             {UNION_ANOMALIAS} JOIN usuarios u ON u.id = t.usuario_id
-            WHERE t.fecha_txn >= ? AND a.tipo IN ('POSIBLE_FRAUDE', 'RAFAGA')
-            ORDER BY t.fecha_txn DESC LIMIT 8""", (desde,)))
+            WHERE {col} >= ? AND a.tipo IN ('POSIBLE_FRAUDE', 'RAFAGA')
+            ORDER BY {col} DESC LIMIT 8""", (desde,)))
 
 
-def _ultimas(db, desde, estados):
+def _ultimas(db, desde, estados, col):
     marcadores = ",".join("?" for _ in estados)
     return filas_a_dicts(db.execute(
         f"""SELECT t.id, t.id_txn, t.valor, t.fecha_txn, t.metodo_pago, t.estado, t.origen, u.email,
                    (SELECT GROUP_CONCAT(tipo) FROM anomalias WHERE transaccion_id = t.id) AS tipos
             FROM transacciones t JOIN usuarios u ON u.id = t.usuario_id
-            WHERE t.fecha_txn >= ? AND t.estado IN ({marcadores})
-            ORDER BY t.fecha_txn DESC, t.id DESC LIMIT 8""", (desde, *estados)))
+            WHERE {col} >= ? AND t.estado IN ({marcadores})
+            ORDER BY {col} DESC, t.id DESC LIMIT 8""", (desde, *estados)))
 
 
-def _mayor_sospechosa(db, desde):
+def _mayor_sospechosa(db, desde, col):
     """Divide y vencerás sobre los montos sospechosos del rango."""
     filas = filas_a_dicts(db.execute(
-        """SELECT t.id_txn, t.valor, t.fecha_txn, u.email FROM transacciones t
-           JOIN usuarios u ON u.id = t.usuario_id
-           WHERE t.fecha_txn >= ? AND t.estado != 'APROBADA'""", (desde,)))
+        f"""SELECT t.id_txn, t.valor, t.fecha_txn, u.email FROM transacciones t
+            JOIN usuarios u ON u.id = t.usuario_id
+            WHERE {col} >= ? AND t.estado != 'APROBADA'""", (desde,)))
     mayor = mayor_por_division(filas, clave=lambda f: f["valor"])
     return {"transaccion": mayor, "comparadas": len(filas)}
 
@@ -256,7 +283,7 @@ def listar_transacciones(db, estado=None, busqueda=None, pagina=1, por_pagina=15
     ).fetchone()[0]
     filas = filas_a_dicts(db.execute(
         f"""SELECT t.id, t.id_txn, t.valor, t.fecha_txn, t.metodo_pago, t.estado, t.origen, t.hash_valido,
-                   t.fecha_creacion, u.email,
+                   t.firma, t.fecha_creacion, u.email,
                    (SELECT GROUP_CONCAT(tipo) FROM anomalias WHERE transaccion_id = t.id) AS tipos
             FROM transacciones t JOIN usuarios u ON u.id = t.usuario_id{donde}
             ORDER BY t.fecha_creacion DESC, t.id DESC LIMIT ? OFFSET ?""",

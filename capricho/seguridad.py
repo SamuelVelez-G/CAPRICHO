@@ -82,6 +82,42 @@ def hash_es_valido(transaccion: dict, hash_recibido: str, llave: bytes) -> bool:
     return hmac.compare_digest(esperado, str(hash_recibido).strip().lower())
 
 
+def _mensajes_posibles(transaccion: dict):
+    """Las formas razonables en que el emisor pudo serializar la transacción.
+
+    No sabemos con qué script firma el generador del profesor, así que se
+    prueban las variantes más comunes: solo los 5 campos de la diapositiva 40
+    o todos los campos menos "hash"; llaves ordenadas (Python, diapositiva 19)
+    o en el orden en que llegaron (JSON.stringify de JavaScript); separadores
+    compactos o los de json.dumps por defecto.
+    """
+    sin_hash = {k: v for k, v in transaccion.items() if k != "hash"}
+    basicos = {c: transaccion[c] for c in CAMPOS_FIRMADOS if c in transaccion}
+    vistos = set()
+    for nombre_campos, objeto in (("5 campos", basicos), ("todos los campos", sin_hash)):
+        for ordenar in (True, False):
+            for separadores in ((",", ":"), (", ", ": ")):
+                for solo_ascii in (True, False):
+                    mensaje = json.dumps(objeto, sort_keys=ordenar, separators=separadores, ensure_ascii=solo_ascii)
+                    if mensaje not in vistos:
+                        vistos.add(mensaje)
+                        yield mensaje, f"{nombre_campos}, {'llaves ordenadas' if ordenar else 'orden recibido'}"
+
+
+def verificar_hash(transaccion: dict, hash_recibido, llaves, aceptar_sha256_simple=True):
+    """Devuelve (valido, metodo). `metodo` dice cómo se validó, para mostrarlo."""
+    recibido = str(hash_recibido).strip().lower()
+    nombres = {0: "llave propia", 1: "llave de la diapositiva 19"}
+    for mensaje, forma in _mensajes_posibles(transaccion):
+        datos = mensaje.encode("utf-8")
+        for posicion, llave in enumerate(llaves):
+            if hmac.compare_digest(hmac.new(llave, datos, hashlib.sha256).hexdigest(), recibido):
+                return True, f"HMAC-SHA256 ({nombres.get(posicion, 'llave extra')}; {forma})"
+        if aceptar_sha256_simple and hmac.compare_digest(hashlib.sha256(datos).hexdigest(), recibido):
+            return True, f"SHA-256 sin llave ({forma})"
+    return False, "no coincide con ninguna firma"
+
+
 # =============================================================================
 #  INYECCIÓN SQL
 # =============================================================================

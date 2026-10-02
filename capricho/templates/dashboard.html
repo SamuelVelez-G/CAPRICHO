@@ -17,6 +17,10 @@
         <button type="button" data-rango="90d" aria-pressed="false">90 días</button>
         <button type="button" data-rango="todo" aria-pressed="false">Todo</button>
       </div>
+      <div class="segmentado" id="por" role="group" aria-label="Contar por">
+        <button type="button" data-por="txn" aria-pressed="true" title="La fecha que trae cada transacción (campo date)">Fecha de la transacción</button>
+        <button type="button" data-por="llegada" aria-pressed="false" title="Cuándo llegó al servidor">Llegada al servidor</button>
+      </div>
       <label class="en-vivo"><span class="punto-vivo" id="punto-vivo"></span><input type="checkbox" id="en-vivo" checked> En vivo (5 s)</label>
     </div>
   </div>
@@ -41,12 +45,19 @@
 
   <div class="kpis" id="kpis"></div>
 
-  <section class="tarjeta">
-    <div class="tarjeta__cabeza">
-      <div><h2 class="tarjeta__titulo">Estado de las anomalías</h2><p class="tarjeta__sub">Del rango elegido. Se revisan en la tabla de abajo.</p></div>
-    </div>
-    <div class="estados-anomalias" id="estados-anomalias"></div>
-  </section>
+  <div class="rejilla rejilla--12-8">
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Estado de las anomalías</h2><p class="tarjeta__sub">Del rango elegido. Se revisan en la tabla de abajo.</p></div>
+      </div>
+      <div class="estados-anomalias" id="estados-anomalias"></div>
+    </section>
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">Verificación del hash</h2>
+      <p class="tarjeta__sub">Cómo se validó la firma de cada transacción recibida.</p>
+      <ul class="lineas-precio" id="firmas"></ul>
+    </section>
+  </div>
 
   <section class="tarjeta">
     <div class="tarjeta__cabeza">
@@ -63,6 +74,23 @@
         <h3 class="tarjeta__titulo">Últimas sospechosas y rechazadas</h3>
         <ul class="lista-txn" id="ultimas-malas"></ul>
       </div>
+    </div>
+  </section>
+
+  <section class="tarjeta" id="ventana-en-vivo">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Ventana deslizante en acción</h2>
+        <p class="tarjeta__sub">Cada punto es una transacción del mismo usuario en la línea del tiempo. El recuadro es la ventana: se desliza de izquierda a derecha y cuenta cuántas caben adentro. Cuando llega al umbral, el detector marca la anomalía.</p></div>
+      <button class="boton boton--xs" id="reproducir-ventana" type="button">{{ icono("reloj") }} Deslizar otra vez</button>
+    </div>
+    <div class="filtros-tabla"><select id="caso-ventana" aria-label="Caso de múltiples transacciones"></select></div>
+    <div class="grafica" id="g-ventana"></div>
+    <p class="tarjeta__sub" id="conteo-ventana"></p>
+    <div class="leyenda">
+      <span class="leyenda__item c-ok"><span class="leyenda__muestra"></span>Aprobada</span>
+      <span class="leyenda__item c-alerta"><span class="leyenda__muestra"></span>Sospechosa</span>
+      <span class="leyenda__item c-critico"><span class="leyenda__muestra"></span>Rechazada</span>
+      <span class="leyenda__item"><span class="leyenda__muestra leyenda__muestra--anillo"></span>La transacción que disparó la anomalía</span>
     </div>
   </section>
 
@@ -167,6 +195,7 @@
           <div class="campo" data-campo="rafaga.ventana_segundos"><label for="r-raf-v">en (s)</label><input id="r-raf-v" name="rafaga_ventana" type="number" step="0.1" min="0.1"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
           <div class="campo" data-campo="monto_atipico"><label for="r-monto">Monto atípico ($)</label><input id="r-monto" name="monto" type="number" step="1000" min="10000"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
         </div>
+        <label class="casilla bloque"><input type="checkbox" name="rafaga_llegada"> Ráfaga también por hora de llegada al servidor <span class="muted">(apágala si el generador envía muy rápido)</span></label>
         <div class="hero__acciones">
           <button class="boton boton--sm" type="button" id="guardar-patch">PATCH · solo cambios</button>
           <button class="boton boton--sm boton--contorno" type="button" id="guardar-put">PUT · reemplazar todo</button>

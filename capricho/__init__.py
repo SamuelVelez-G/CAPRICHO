@@ -10,6 +10,7 @@ import time
 
 from flask import Flask, g, jsonify, render_template, request
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from . import db
 from .config import Configuracion
@@ -19,14 +20,24 @@ from .registro import configurar_logs, logger, registrar_evento
 from .seguridad import agregar_cabeceras, token_csrf, usuario_actual
 
 
+RUTAS_ALTERNAS = ("/transacciones", "/api/transactions", "/transactions", "/api/transaccion")
+
+
 def create_app(config=None):
     app = Flask(__name__)
     app.config.from_object(Configuracion)
     app.config["SEMBRAR"] = "completo"          # completo | base | no
     if config:
         app.config.update(config)
+    app.config["LLAVES_VERIFICACION"] = [app.config["LLAVE_HMAC"], app.config["LLAVE_DIAPOSITIVA"],
+                                         *app.config["LLAVES_EXTRA"]]
     app.json.ensure_ascii = False
     app.json.sort_keys = False
+
+    # Detrás de ngrok o Cloudflare todas las peticiones llegan desde 127.0.0.1;
+    # el túnel manda la IP real en X-Forwarded-For. ProxyFix la toma de ahí
+    # (confía en un solo salto: el del túnel).
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     configurar_logs(app.config["CARPETA_LOGS"])
     db.init_app(app)
@@ -73,6 +84,11 @@ def _registrar_rutas(app):
                    api_pedidos, api_admin, api_laboratorio):
         app.register_blueprint(modulo.bp)
 
+    # Nombres alternativos del endpoint, por si el generador del profesor usa otro.
+    for ruta in RUTAS_ALTERNAS:
+        app.add_url_rule(ruta, endpoint=f"alias{ruta.replace('/', '_')}",
+                         view_func=api_transacciones.recibir, methods=["POST"])
+
     @app.context_processor
     def variables_de_plantilla():
         return {"usuario": usuario_actual(), "csrf_token": token_csrf,
@@ -86,6 +102,12 @@ def _registrar_hooks(app, estado):
     def antes():
         g.inicio = time.perf_counter()
         if not request.path.startswith("/api/"):
+            return None
+        # El endpoint público de transacciones no pasa por este límite: con
+        # ngrok todas las peticiones llegan desde 127.0.0.1 y el generador del
+        # profesor manda muchas por segundo. Ahí la protección es la firma de
+        # cada transacción y la regla de ráfaga por usuario.
+        if request.path.startswith("/api/transacciones") or request.path in RUTAS_ALTERNAS:
             return None
         # Ventana deslizante por IP: más de N peticiones en 1 s -> 429.
         ip = request.remote_addr or "desconocida"

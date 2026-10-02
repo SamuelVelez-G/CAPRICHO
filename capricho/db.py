@@ -20,6 +20,9 @@ def conectar(ruta: str) -> sqlite3.Connection:
     conexion.row_factory = sqlite3.Row
     conexion.execute("PRAGMA foreign_keys = ON")
     conexion.execute("PRAGMA busy_timeout = 15000")
+    # En modo WAL, NORMAL es seguro y evita esperar al disco en cada commit:
+    # importante cuando llegan miles de transacciones seguidas.
+    conexion.execute("PRAGMA synchronous = NORMAL")
     return conexion
 
 
@@ -39,6 +42,10 @@ def cerrar_db(_error=None):
 def crear_esquema(conexion: sqlite3.Connection):
     conexion.execute("PRAGMA journal_mode = WAL")   # lecturas y escrituras en paralelo
     conexion.executescript(ESQUEMA.read_text(encoding="utf-8"))
+    # Bases creadas antes de agregar la columna "firma".
+    columnas = {fila[1] for fila in conexion.execute("PRAGMA table_info(transacciones)")}
+    if "firma" not in columnas:
+        conexion.execute("ALTER TABLE transacciones ADD COLUMN firma TEXT")
     conexion.commit()
 
 

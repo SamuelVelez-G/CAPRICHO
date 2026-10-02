@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS transacciones (
     estado              TEXT    NOT NULL CHECK (estado IN ('APROBADA', 'SOSPECHOSA', 'RECHAZADA')),
     hash                TEXT    NOT NULL,
     hash_valido         INTEGER NOT NULL CHECK (hash_valido IN (0, 1)),
+    firma               TEXT,                           -- cómo se validó el hash
     metodo_pago         TEXT    NOT NULL,
     origen              TEXT    NOT NULL CHECK (origen IN ('API', 'LOTE', 'TIENDA', 'DEMO')),
     ip                  TEXT,

@@ -9,12 +9,16 @@ def estado_app():
     return current_app.extensions["capricho"]
 
 
-def leer_json():
-    """El cuerpo debe ser JSON válido. Si no, 422 con un mensaje claro."""
-    if not request.is_json:
+def leer_json(forzar=False):
+    """El cuerpo debe ser JSON válido. Si no, 422 con un mensaje claro.
+
+    forzar=True lee el cuerpo como JSON aunque el Content-Type no lo diga
+    (algunos scripts mandan text/plain); se usa en el endpoint público.
+    """
+    if not forzar and not request.is_json:
         raise ErrorValidacion({"cuerpo": "El Content-Type debe ser application/json"},
                               "Formato de solicitud inválido")
-    datos = request.get_json(silent=True)
+    datos = request.get_json(silent=True, force=forzar)
     if datos is None:
         raise ErrorValidacion({"cuerpo": "El JSON está mal formado"}, "Formato de solicitud inválido")
     return datos

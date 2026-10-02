@@ -1,8 +1,11 @@
 """Los casos de uso de las diapositivas 39, 42 y 43, más ráfaga, hash y replay."""
 
+import hashlib
+import hmac
+import json
 import unittest
 
-from tests.base import PruebaCapricho
+from tests.base import LLAVE, PruebaCapricho
 
 
 class CasosDeUso(PruebaCapricho):
@@ -31,21 +34,31 @@ class CasosDeUso(PruebaCapricho):
 
     def test_cinco_en_el_mismo_segundo_se_bloquean(self):
         respuestas = [self.enviar_txn("r@r.com", self.a_las(15, 0, 7, 150 * n)) for n in range(5)]
-        self.assertEqual(respuestas[4].status_code, 429)
-        self.assertEqual(respuestas[4].get_json()["transaccion"]["anomalias"][0]["tipo"], "RAFAGA")
+        quinta = respuestas[4].get_json()
+        self.assertEqual(respuestas[4].status_code, 201)       # se registró, aunque sea fraude
+        self.assertEqual(quinta["estado"], "RECHAZADA")
+        self.assertEqual(quinta["resultado"], "ANOMALIA")
+        self.assertEqual(quinta["anomalias"], ["RAFAGA"])
         self.assertNotEqual(respuestas[3].get_json()["transaccion"]["estado"], "RECHAZADA")
 
     def test_un_segundo_exacto_no_es_el_mismo_segundo(self):
-        # 11:00:01.000 y 11:00:02.000 NO están "en el mismo segundo". Se manda
-        # como lote para que la regla de llegada al servidor no intervenga.
+        # 11:00:01.000 y 11:00:02.000 NO están "en el mismo segundo".
         lote = [self.transaccion("s@s.com", self.a_las(11, 0, s)) for s in range(1, 6)]
         resultados = self.cliente.post("/api/transacciones/lote", json=lote).get_json()["lote"]["resultados"]
         self.assertNotIn("RAFAGA", {a["tipo"] for r in resultados for a in r["anomalias"]})
 
-    def test_cinco_llegadas_en_un_segundo_aunque_mientan_en_la_fecha(self):
-        # Fechas separadas por minutos, pero las 5 peticiones llegan juntas.
-        respuestas = [self.enviar_txn("x@x.com", self.a_las(8, n * 5, 0)) for n in range(5)]
-        self.assertEqual(respuestas[4].status_code, 429)
+    def test_llegadas_rapidas_con_fechas_separadas_no_son_rafaga_por_defecto(self):
+        # Un generador que envía rápido transacciones con fechas separadas por
+        # minutos no debe producir ráfagas falsas.
+        respuestas = [self.enviar_txn("x@x.com", self.a_las(8, n * 5, 0)) for n in range(6)]
+        self.assertEqual({r.get_json()["estado"] for r in respuestas}, {"APROBADA"})
+
+    def test_regla_de_llegada_se_puede_activar(self):
+        self.como_admin()
+        self.enviar_json("PATCH", "/api/configuracion",
+                         {"rafaga": {"maximo": 5, "ventana_segundos": 1, "por_llegada": True}})
+        respuestas = [self.enviar_txn("y@y.com", self.a_las(8, n * 5, 0)) for n in range(5)]
+        self.assertEqual(respuestas[4].get_json()["anomalias"], ["RAFAGA"])
 
     def test_fuera_de_orden_tambien_se_detecta(self):
         self.enviar_txn("d@d.com", self.a_las(9, 0, 3))
@@ -65,8 +78,9 @@ class Integridad(PruebaCapricho):
         txn = self.transaccion("h@h.com", self.a_las(10, 0, 1))
         txn["value"] = 1          # se cambió el valor después de firmar
         respuesta = self.cliente.post("/api/transacciones", json=txn)
-        self.assertEqual(respuesta.status_code, 401)
-        self.assertEqual(respuesta.get_json()["transaccion"]["anomalias"][0]["tipo"], "HASH_INVALIDO")
+        self.assertEqual(respuesta.status_code, 201)
+        self.assertEqual(respuesta.get_json()["estado"], "RECHAZADA")
+        self.assertEqual(respuesta.get_json()["anomalias"], ["HASH_INVALIDO"])
 
     def test_replay_con_el_mismo_id(self):
         txn = self.transaccion("p@p.com", self.a_las(10, 0, 1))
@@ -100,6 +114,63 @@ class Integridad(PruebaCapricho):
         cuerpo = respuesta.get_json()["lote"]
         self.assertEqual(cuerpo["orden_cronologico"], [str(lote[1]["idTxn"]), str(lote[2]["idTxn"]), str(lote[0]["idTxn"])])
         self.assertEqual(cuerpo["resumen"], {"APROBADA": 2, "SOSPECHOSA": 1})
+
+
+class FormatosDelGenerador(PruebaCapricho):
+    """Formas en que el generador del profesor podría firmar y enviar."""
+
+    def base(self, **cambios):
+        self._id += 1
+        txn = {"idTxn": self._id, "user": "g@g.com", "date": self.a_las(10, 0, 1).isoformat(timespec="milliseconds"),
+               "value": 50000, "paymentMethod": "Tarjeta"}
+        txn.update(cambios)
+        return txn
+
+    def enviar(self, txn, ruta="/api/transacciones"):
+        return self.cliente.post(ruta, json=txn).get_json()
+
+    def test_llave_de_la_diapositiva_19(self):
+        txn = self.base()
+        datos = json.dumps(txn, sort_keys=True, separators=(",", ":")).encode()
+        txn["hash"] = hmac.new(b"mi_llave_privada_123", datos, hashlib.sha256).hexdigest()
+        cuerpo = self.enviar(txn)
+        self.assertEqual(cuerpo["estado"], "APROBADA")
+        self.assertIn("diapositiva 19", cuerpo["transaccion"]["analisis"]["firma"])
+
+    def test_sha256_sin_llave_de_la_diapositiva_17(self):
+        txn = self.base()
+        txn["hash"] = hashlib.sha256(json.dumps(txn, sort_keys=True).encode()).hexdigest()
+        self.assertEqual(self.enviar(txn)["estado"], "APROBADA")
+
+    def test_orden_de_javascript_y_campos_extra(self):
+        txn = self.base(ip="181.50.1.2", status="PENDIENTE")
+        datos = json.dumps(txn, separators=(",", ":")).encode()          # como JSON.stringify
+        txn["hash"] = hmac.new(LLAVE, datos, hashlib.sha256).hexdigest()
+        self.assertEqual(self.enviar(txn)["estado"], "APROBADA")
+
+    def test_sha256_alterado_igual_se_detecta(self):
+        txn = self.base()
+        txn["hash"] = hashlib.sha256(json.dumps(txn, sort_keys=True).encode()).hexdigest()
+        txn["value"] = 1
+        self.assertEqual(self.enviar(txn)["anomalias"], ["HASH_INVALIDO"])
+
+    def test_valor_como_texto_y_otro_metodo_de_pago(self):
+        txn = self.base(value="45000", paymentMethod="transferencia", date="2026-09-23 10:30:01")
+        txn["hash"] = hashlib.sha256(json.dumps(txn, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        cuerpo = self.enviar(txn)
+        self.assertEqual(cuerpo["estado"], "APROBADA")
+        self.assertEqual(cuerpo["transaccion"]["valor"], 45000)
+
+    def test_lista_en_el_endpoint_principal_y_ruta_alterna(self):
+        lote = [self.transaccion("z@z.com", self.a_las(10, 0, s)) for s in (1, 2, 3)]
+        self.assertEqual(self.enviar(lote)["lote"]["resumen"], {"APROBADA": 2, "SOSPECHOSA": 1})
+        otra = self.transaccion("w@w.com", self.a_las(10, 0, 1))
+        self.assertEqual(self.enviar(otra, "/transacciones")["estado"], "APROBADA")
+
+    def test_el_limite_por_ip_no_frena_al_generador(self):
+        self.app.extensions["capricho"].limitador_ip.maximo = 5
+        estados = [self.enviar(self.transaccion(f"u{n}@ip.com", self.a_las(10, 0, 1)))["estado"] for n in range(30)]
+        self.assertEqual(set(estados), {"APROBADA"})
 
 
 class Configuracion(PruebaCapricho):

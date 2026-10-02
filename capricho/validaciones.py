@@ -27,7 +27,10 @@ RE_NOMBRE = re.compile(r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+( [A-Za-zÁÉÍÓ
 RE_EMAIL = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
 RE_TELEFONO = re.compile(r"^3\d{9}$")
 RE_DIRECCION = re.compile(r"^[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ#.,°/\- ]+$")
-RE_ID_TXN = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+RE_ID_TXN = re.compile(r"^[A-Za-z0-9_\-:.]{1,64}$")
+RE_ID_USUARIO = re.compile(r"^[a-z0-9._+\-]{2,120}$")
+RE_NUMERO = re.compile(r"^\d+(\.\d+)?$")
+RE_METODO = re.compile(r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 ._\-]{2,40}$")
 RE_TEXTO_PRODUCTO = re.compile(r"^[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ.,()% \-]+$")
 
 
@@ -207,16 +210,23 @@ def validar_transaccion(datos):
         elif isinstance(id_txn, str) and RE_ID_TXN.match(id_txn.strip()):
             id_txn = id_txn.strip()
         else:
-            errores["idTxn"] = "Debe ser un entero positivo o un código alfanumérico de hasta 40 caracteres"
+            errores["idTxn"] = "Debe ser un entero positivo o un código alfanumérico de hasta 64 caracteres"
 
-    email = datos.get("user")
+    # El usuario es un correo (diapositiva 35). Se acepta también un
+    # identificador simple (ej. 25 o "usuario25", como en la diapositiva 17).
+    usuario = datos.get("user")
     if "user" not in errores:
-        if not isinstance(email, str):
-            errores["user"] = "Debe ser un correo electrónico"
+        if _es_entero(usuario) and usuario > 0:
+            usuario = str(usuario)
+        if not isinstance(usuario, str):
+            errores["user"] = "Debe ser un correo electrónico o un identificador de usuario"
         else:
-            email = email.strip().lower()
-            if error := validar_email(email):
-                errores["user"] = error
+            usuario = usuario.strip().lower()
+            if "@" in usuario:
+                if error := validar_email(usuario):
+                    errores["user"] = error
+            elif not RE_ID_USUARIO.match(usuario):
+                errores["user"] = "Debe ser un correo electrónico o un identificador de letras y números"
 
     fecha = None
     if "date" not in errores:
@@ -231,8 +241,13 @@ def validar_transaccion(datos):
                 if fecha > ahora() + timedelta(days=1):
                     errores["date"] = "La fecha no puede estar en el futuro"
 
+    # Un número, o un texto que sea un número ("50000"), igual que en la
+    # diapositiva 22 donde el valor llega como texto y se convierte.
     valor = datos.get("value")
     if "value" not in errores:
+        if isinstance(valor, str) and RE_NUMERO.match(valor.strip()):
+            valor = float(valor.strip())
+            valor = int(valor) if valor.is_integer() else valor
         if not _es_numero(valor):
             errores["value"] = "Debe ser un número (no texto ni booleano)"
         elif valor <= 0:
@@ -242,12 +257,15 @@ def validar_transaccion(datos):
         elif round(valor, 2) != valor:
             errores["value"] = "Máximo dos decimales"
 
+    # Se aceptan otros métodos además de los de la tienda (Transferencia,
+    # Crédito...). Los conocidos se normalizan para que las estadísticas cuadren.
     metodo = datos.get("paymentMethod")
     if "paymentMethod" not in errores:
-        if not isinstance(metodo, str) or metodo.strip() not in METODOS_PAGO:
-            errores["paymentMethod"] = f"Debe ser uno de: {', '.join(METODOS_PAGO)}"
+        if not isinstance(metodo, str) or not RE_METODO.match(metodo.strip()):
+            errores["paymentMethod"] = "Debe ser texto de 2 a 40 letras (ej. Tarjeta, Nequi, PSE)"
         else:
-            metodo = metodo.strip()
+            metodo = " ".join(metodo.split())
+            metodo = next((m for m in METODOS_PAGO if m.lower() == metodo.lower()), metodo)
 
     hash_recibido = datos.get("hash")
     if "hash" not in errores:
@@ -259,7 +277,7 @@ def validar_transaccion(datos):
 
     return {
         "id_txn": id_txn,
-        "email": email,
+        "email": usuario,
         "fecha": fecha,
         "valor": valor,
         "metodo_pago": metodo,
@@ -483,8 +501,11 @@ def validar_reglas(datos, actuales, parcial=False):
                 errores["rafaga.maximo"] = "Entero entre 2 y 100"
             if not _es_numero(ventana) or not 0.1 <= ventana <= 60:
                 errores["rafaga.ventana_segundos"] = "Entre 0.1 y 60 segundos"
-            if "rafaga.maximo" not in errores and "rafaga.ventana_segundos" not in errores:
-                nuevas["rafaga"] = {"maximo": maximo, "ventana_segundos": ventana}
+            por_llegada = rafaga.get("por_llegada", actuales["rafaga"].get("por_llegada", False))
+            if not isinstance(por_llegada, bool):
+                errores["rafaga.por_llegada"] = "Debe ser true o false"
+            if not any(c.startswith("rafaga.") for c in errores):
+                nuevas["rafaga"] = {"maximo": maximo, "ventana_segundos": ventana, "por_llegada": por_llegada}
 
     if "monto_atipico" in datos:
         monto = datos["monto_atipico"]

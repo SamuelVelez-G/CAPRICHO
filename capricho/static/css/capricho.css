@@ -703,6 +703,10 @@ fieldset.paso > legend { padding: 0; }
 }
 
 /* --- Utilidades ------------------------------------------------------------ */
+.casilla { display: flex; align-items: center; gap: 8px; font-size: .92rem; font-weight: 600; }
+.casilla input { width: 18px; height: 18px; accent-color: var(--vino); }
+.panel-cabeza .filtros { justify-content: flex-end; }
+#caso-ventana { max-width: 100%; }
 .separado { margin-top: 18px; }
 .pagina-simple { padding-top: 48px; }
 .leyenda__muestra--anillo { background: #fff; border: 2.5px solid var(--tinta); border-radius: 50%; }

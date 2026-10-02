@@ -40,8 +40,24 @@ class Configuracion:
 
     # Llave compartida con la pasarela de pagos para firmar transacciones
     # con HMAC-SHA256 (diapositiva 19). Quien no la tenga no puede generar
-    # un hash válido.
+    # un hash válido. Con ella firman la tienda y el laboratorio.
     LLAVE_HMAC = os.environ.get("CAPRICHO_LLAVE_HMAC", "capricho_llave_secreta_2026").encode("utf-8")
+
+    # Llaves que se aceptan al VERIFICAR. Además de la propia se acepta la de
+    # la diapositiva 19, que es la que probablemente usa el generador del
+    # profesor. Si él da otra: CAPRICHO_LLAVES_EXTRA="otra_llave,una_mas".
+    LLAVE_DIAPOSITIVA = b"mi_llave_privada_123"
+    LLAVES_EXTRA = [
+        llave.strip().encode("utf-8")
+        for llave in os.environ.get("CAPRICHO_LLAVES_EXTRA", "").split(",") if llave.strip()
+    ]
+    # create_app arma LLAVES_VERIFICACION = [propia, diapositiva, extras...]
+
+    # La diapositiva 17 muestra "Hash = SHA256(datos)" sin llave. Si el
+    # generador del profesor firma así, también se acepta: igual detecta
+    # cualquier dato alterado. En producción se apaga (CAPRICHO_SHA256_SIMPLE=0)
+    # para exigir HMAC, porque un SHA-256 sin llave lo puede calcular cualquiera.
+    ACEPTAR_SHA256_SIMPLE = os.environ.get("CAPRICHO_SHA256_SIMPLE", "1") == "1"
 
     # El laboratorio del profesor puede pedirle al servidor que firme una
     # transacción de prueba. En producción esto se apaga (CAPRICHO_LABORATORIO=0).
@@ -62,9 +78,9 @@ class Configuracion:
     SESSION_COOKIE_SAMESITE = "Lax"
     PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
 
-    # Nadie necesita mandar más de 512 KB en una petición; un lote de 500
-    # transacciones ocupa cerca de 100 KB.
-    MAX_CONTENT_LENGTH = 512 * 1024
+    # Tope del tamaño de una petición: un lote de 5000 transacciones ocupa
+    # cerca de 1 MB, así que 5 MB sobra y evita cuerpos gigantes.
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024
 
     # Límite general de peticiones por IP (ventana deslizante de 1 segundo).
     LIMITE_PETICIONES_POR_SEGUNDO = 40

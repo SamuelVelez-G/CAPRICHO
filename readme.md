@@ -53,18 +53,46 @@ Abre **http://127.0.0.1:5000**. La primera vez se crea la base de datos
 | Administrador (dashboard y operación) | `admin@capricho.co` | `Capricho2026*` |
 | Cliente de prueba | `cliente@capricho.co` | `Cliente2026*` |
 
-Para empezar de cero con datos nuevos (por ejemplo, el día de la sustentación,
-para que "Hoy" y "Esta semana" tengan datos):
+Para empezar de cero con 9 semanas de datos de demostración nuevos:
 
 ```bash
 python run.py --reiniciar
 ```
 
-Pruebas automáticas (42 pruebas: casos de uso, seguridad, formularios y métodos HTTP):
+Para la **prueba del profesor**: base de datos sin transacciones (solo productos
+y cuentas), así el dashboard muestra únicamente lo que él envíe:
+
+```bash
+python run.py --reiniciar --limpio
+```
+
+Pruebas automáticas (50 pruebas: casos de uso, formatos del generador, seguridad, formularios y métodos HTTP):
 
 ```bash
 python -m unittest discover -s tests -t .
 ```
+
+---
+
+## URL pública con ngrok (para la prueba del profesor)
+
+El generador del profesor envía las transacciones desde su equipo, así que el
+endpoint necesita una URL pública. Con el servidor corriendo en una terminal:
+
+1. Crear una cuenta gratis en ngrok.com y copiar el *authtoken* del panel.
+2. Instalar ngrok (una sola vez): `winget install Ngrok.Ngrok`
+3. Registrar el token (una sola vez): `ngrok config add-authtoken TU_TOKEN`
+4. En otra terminal: `ngrok http 5000`
+5. Copiar la línea `Forwarding https://xxxx.ngrok-free.app` y darle al profesor
+   **`https://xxxx.ngrok-free.app/api/transacciones`**.
+
+Mientras corre, **http://127.0.0.1:4040** muestra cada petición que llega por
+el túnel con su cuerpo y la respuesta: sirve para ver en vivo qué manda el
+generador. La URL cambia cada vez que se reinicia ngrok (salvo que se use el
+dominio fijo gratuito del panel). Las dos terminales y el computador deben
+quedar encendidos durante la prueba.
+
+Alternativa sin cuenta: `cloudflared tunnel --url http://localhost:5000`.
 
 ---
 
@@ -98,16 +126,29 @@ Cada transacción llega a `POST /api/transacciones` con el formato de la diaposi
 El algoritmo (diapositiva 41), en `capricho/servicios/detector.py`:
 
 1. ¿El `idTxn` ya existe? → **409** (reenvío / *replay*). Se busca en el índice hash, O(1).
-2. ¿El hash HMAC coincide? Si no → **RECHAZADA**, anomalía `HASH_INVALIDO` (crítica), **401**.
+2. ¿El hash coincide? Si no → **RECHAZADA**, anomalía `HASH_INVALIDO` (crítica).
 3. Se identifica al usuario (índice hash por correo).
-4. Se traen **solo** sus transacciones cercanas con el índice `(usuario_id, fecha_txn)` y se corre la ventana deslizante con dos punteros.
-5. **5 o más en menos de 1 segundo** → **RECHAZADA**, anomalía `RAFAGA` (crítica), **429**. Se cuenta por la fecha de la transacción y por la hora real de llegada al servidor, así no sirve mentir en la fecha.
+4. Se traen **solo** sus transacciones cercanas con el índice `(usuario_id, fecha_txn)` y se corre la ventana deslizante con dos punteros. Cuentan todas, también las de hash inválido: el intento ocurrió.
+5. **5 o más en menos de 1 segundo** → **RECHAZADA**, anomalía `RAFAGA` (crítica). Se cuenta con la fecha de cada transacción; opcionalmente también con la hora de llegada al servidor (apagado por defecto, porque un generador que envía muy rápido produciría ráfagas falsas).
 6. **Umbral o más dentro de la ventana** → **SOSPECHOSA**, anomalía `POSIBLE_FRAUDE` (media; alta si supera el umbral).
 7. Monto igual o mayor a $300.000 → **SOSPECHOSA**, anomalía `MONTO_ATIPICO` (baja).
 8. Se registra la transacción y sus anomalías.
 
 Cada usuario tiene su propia ventana (caso de uso 3). Las transacciones pueden
 llegar desordenadas: la ventana revisa vecinas antes y después.
+
+La respuesta es **201** siempre que la transacción quedó registrada, sea normal
+o fraudulenta (diapositiva 41: "Anomalía → Registrar"). El resultado va en el cuerpo:
+
+```json
+{ "ok": true, "resultado": "ANOMALIA", "estado": "SOSPECHOSA", "anomalias": ["POSIBLE_FRAUDE"],
+  "transaccion": { "...": "detalle completo y el análisis de la ventana" } }
+```
+
+Solo responde error cuando la petición misma está mal: **422** campos nulos o
+con formato inválido, **400** inyección SQL, **409** `idTxn` repetido. El
+endpoint también acepta una lista de transacciones (se procesa como lote) y las
+rutas alternativas `/transacciones` y `/api/transactions`.
 
 ### Reglas configurables (PUT y PATCH en `/api/configuracion` o desde el dashboard)
 
@@ -124,10 +165,23 @@ Por defecto queda la regla principal porque con ella se cumplen al pie de la
 letra los ejemplos de las diapositivas 39 y 42 (a las 10:00 con franjas, la
 ventana de 10 s convertiría en anomalía el ejemplo "normal" de 10:00:01, :05 y :09).
 
-### Cómo firmar una transacción (diapositiva 19)
+### Cómo se verifica el hash
 
-La llave compartida de la demostración es `capricho_llave_secreta_2026`
-(se cambia con la variable de entorno `CAPRICHO_LLAVE_HMAC`).
+Como no sabemos con qué script firma el generador del profesor, el servidor
+acepta las formas que muestran las diapositivas y rechaza todo lo demás:
+
+- **HMAC-SHA256** (diapositiva 19) con la llave propia `capricho_llave_secreta_2026`
+  o con la de la diapositiva, `mi_llave_privada_123`. Si el profesor da otra
+  llave, en PowerShell: `$env:CAPRICHO_LLAVES_EXTRA = "su_llave"` antes de `python run.py`.
+- **SHA-256 sin llave** (diapositivas 15 a 17). Se puede exigir solo HMAC con
+  `$env:CAPRICHO_SHA256_SIMPLE = "0"`.
+- Sobre los 5 campos de la diapositiva 40 o sobre todos los campos menos `hash`,
+  con llaves ordenadas (Python) o en el orden recibido (`JSON.stringify` de JavaScript).
+
+Cualquier dato alterado después de firmar cambia el hash y se detecta. El
+dashboard muestra en "Verificación del hash" cómo se validó cada transacción.
+
+### Cómo firmar una transacción (diapositiva 19)
 
 ```python
 import hashlib, hmac, json
@@ -170,7 +224,7 @@ pinta con `textContent` (sin `innerHTML`), lo que evita XSS.
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| POST | `/api/transacciones` | Recibe una transacción (pasarela, Postman, laboratorio) |
+| POST | `/api/transacciones` | Recibe una transacción o una lista (pasarela, generador del profesor, laboratorio) |
 | POST | `/api/transacciones/lote` | Lista desordenada: se ordena con merge sort y se analiza |
 | GET | `/api/transacciones` | Listado con filtros (admin) |
 | GET | `/api/transacciones/<idTxn>` | Búsqueda por índice hash (admin) |

@@ -5,7 +5,7 @@ Por cada transacción que llega:
 
     Recibir transacción
       -> ¿el idTxn ya existe?                  sí -> 409 (reenvío / replay)
-      -> ¿el hash HMAC coincide?               no -> RECHAZADA  (HASH_INVALIDO, crítico)
+      -> ¿el hash coincide?                    no -> RECHAZADA  (HASH_INVALIDO, crítico)
       -> identificar al usuario (índice hash, O(1))
       -> traer SOLO sus transacciones cercanas (índice usuario + fecha)
       -> ventana deslizante:
@@ -26,7 +26,7 @@ from datetime import time, timedelta
 from ..errores import ErrorReplay, ErrorValidacion
 from ..estructuras import max_en_ventana, merge_sort
 from ..registro import logger
-from ..seguridad import firmar_transaccion, hash_es_valido
+from ..seguridad import firmar_transaccion, verificar_hash
 from ..tiempo import a_texto, ahora, desde_texto
 from ..validaciones import validar_transaccion
 from . import usuarios
@@ -46,7 +46,11 @@ REGLAS_POR_DEFECTO = {
          "ventana_segundos": 3, "umbral": 3},
     ],
     # "Un usuario no puede hacer 5 transacciones en el mismo segundo."
-    "rafaga": {"maximo": 5, "ventana_segundos": 1},
+    # Se cuenta con la fecha de cada transacción. Con por_llegada=True
+    # también se cuenta con la hora real en que llegaron al servidor (útil si
+    # alguien miente en la fecha), pero se deja apagado porque un generador de
+    # pruebas que envía muy rápido produciría ráfagas falsas.
+    "rafaga": {"maximo": 5, "ventana_segundos": 1, "por_llegada": False},
     "monto_atipico": 300_000,
 }
 
@@ -122,7 +126,7 @@ def contar_en_ventana(db, usuario_id, instante, ventana_segundos) -> int:
     delta = timedelta(seconds=ventana_segundos)
     filas = db.execute(
         """SELECT fecha_txn FROM transacciones
-           WHERE usuario_id = ? AND hash_valido = 1 AND fecha_txn > ? AND fecha_txn < ?
+           WHERE usuario_id = ? AND fecha_txn > ? AND fecha_txn < ?
            ORDER BY fecha_txn""",
         (usuario_id, a_texto(instante - delta), a_texto(instante + delta)),
     ).fetchall()
@@ -139,7 +143,7 @@ def contar_llegadas(db, usuario_id, llegada, ventana_segundos) -> int:
     desde = a_texto(llegada - timedelta(seconds=ventana_segundos))
     previas = db.execute(
         """SELECT COUNT(*) FROM transacciones
-           WHERE usuario_id = ? AND hash_valido = 1 AND fecha_creacion > ? AND fecha_creacion <= ?""",
+           WHERE usuario_id = ? AND fecha_creacion > ? AND fecha_creacion <= ?""",
         (usuario_id, desde, a_texto(llegada)),
     ).fetchone()[0]
     return previas + 1
@@ -157,11 +161,12 @@ def _anomalia(tipo, nivel, cantidad, ventana, detalle):
 def _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, llegada):
     momento = a_texto(llegada)
     cursor = db.execute(
-        """INSERT INTO transacciones (id_txn, usuario_id, valor, fecha_txn, estado, hash, hash_valido,
+        """INSERT INTO transacciones (id_txn, usuario_id, valor, fecha_txn, estado, hash, hash_valido, firma,
                                       metodo_pago, origen, ip, fecha_creacion, fecha_actualizacion)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (txn["id_txn"], usuario_id, txn["valor"], a_texto(txn["fecha"]), estado_txn, txn["hash"],
-         int(txn["hash_valido"]), txn["metodo_pago"], origen, ip, momento, momento),
+         int(txn["hash_valido"]), txn.get("firma", "firmada por la tienda"), txn["metodo_pago"], origen, ip,
+         momento, momento),
     )
     transaccion_id = cursor.lastrowid
 
@@ -211,58 +216,60 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None,
         anomalias = []
         analisis = {
             "hash_valido": bool(txn["hash_valido"]),
+            "firma": txn.get("firma", "firmada por la tienda"),
             "regla": regla["nombre"],
             "ventana_segundos": regla["ventana_segundos"],
             "umbral": regla["umbral"],
         }
 
+        # Todas las transacciones cuentan en la ventana, también las de hash
+        # inválido: el intento ocurrió aunque los datos vengan alterados.
+        rafaga = reglas["rafaga"]
+        por_fecha = contar_en_ventana(db, usuario_id, txn["fecha"], rafaga["ventana_segundos"])
+        por_llegada = (contar_llegadas(db, usuario_id, llegada, rafaga["ventana_segundos"])
+                       if contar_llegada and rafaga.get("por_llegada", False) else 1)
+        en_ventana = contar_en_ventana(db, usuario_id, txn["fecha"], regla["ventana_segundos"])
+        analisis.update({
+            "transacciones_en_ventana": en_ventana,
+            "rafaga_maximo": rafaga["maximo"],
+            "rafaga_por_fecha": por_fecha,
+            "rafaga_por_llegada": por_llegada,
+        })
+
+        estado_txn = "APROBADA"
         if not txn["hash_valido"]:
-            # Si la firma no cuadra, los datos no son confiables: no se
-            # analizan ni cuentan en la ventana del usuario.
             estado_txn = "RECHAZADA"
             anomalias.append(_anomalia(
                 "HASH_INVALIDO", "CRITICO", 1, 0,
-                "El hash recibido no coincide con el HMAC-SHA256 calculado con la llave compartida: "
-                "los datos se alteraron en el camino o la firma es falsa.",
+                "El hash recibido no coincide con el que se calcula sobre los datos (HMAC-SHA256 con la "
+                "llave compartida ni SHA-256): los datos se alteraron en el camino o la firma es falsa.",
             ))
-        else:
-            rafaga = reglas["rafaga"]
-            por_fecha = contar_en_ventana(db, usuario_id, txn["fecha"], rafaga["ventana_segundos"])
-            por_llegada = (contar_llegadas(db, usuario_id, llegada, rafaga["ventana_segundos"])
-                           if contar_llegada else 1)
-            en_ventana = contar_en_ventana(db, usuario_id, txn["fecha"], regla["ventana_segundos"])
-            analisis.update({
-                "transacciones_en_ventana": en_ventana,
-                "rafaga_maximo": rafaga["maximo"],
-                "rafaga_por_fecha": por_fecha,
-                "rafaga_por_llegada": por_llegada,
-            })
 
-            estado_txn = "APROBADA"
-            en_rafaga = max(por_fecha, por_llegada)
-            if en_rafaga >= rafaga["maximo"]:
-                estado_txn = "RECHAZADA"
-                anomalias.append(_anomalia(
-                    "RAFAGA", "CRITICO", en_rafaga, rafaga["ventana_segundos"],
-                    f"{en_rafaga} transacciones en menos de {rafaga['ventana_segundos']:g} s. "
-                    f"Un usuario no puede hacer {rafaga['maximo']} en el mismo segundo: se bloqueó.",
-                ))
-            elif en_ventana >= regla["umbral"]:
+        en_rafaga = max(por_fecha, por_llegada)
+        if en_rafaga >= rafaga["maximo"]:
+            estado_txn = "RECHAZADA"
+            anomalias.append(_anomalia(
+                "RAFAGA", "CRITICO", en_rafaga, rafaga["ventana_segundos"],
+                f"{en_rafaga} transacciones en menos de {rafaga['ventana_segundos']:g} s. "
+                f"Un usuario no puede hacer {rafaga['maximo']} en el mismo segundo: se bloqueó.",
+            ))
+        elif en_ventana >= regla["umbral"]:
+            if estado_txn == "APROBADA":
                 estado_txn = "SOSPECHOSA"
-                nivel = "MEDIO" if en_ventana == regla["umbral"] else "ALTO"
-                anomalias.append(_anomalia(
-                    "POSIBLE_FRAUDE", nivel, en_ventana, regla["ventana_segundos"],
-                    f"{en_ventana} transacciones dentro de {regla['ventana_segundos']:g} s "
-                    f"(umbral {regla['umbral']}) · {regla['nombre']}",
-                ))
+            nivel = "MEDIO" if en_ventana == regla["umbral"] else "ALTO"
+            anomalias.append(_anomalia(
+                "POSIBLE_FRAUDE", nivel, en_ventana, regla["ventana_segundos"],
+                f"{en_ventana} transacciones dentro de {regla['ventana_segundos']:g} s "
+                f"(umbral {regla['umbral']}) · {regla['nombre']}",
+            ))
 
-            if txn["valor"] >= reglas["monto_atipico"]:
-                anomalias.append(_anomalia(
-                    "MONTO_ATIPICO", "BAJO", 1, 0,
-                    f"Monto {dinero(txn['valor'])} igual o mayor al límite de {dinero(reglas['monto_atipico'])}",
-                ))
-                if estado_txn == "APROBADA":
-                    estado_txn = "SOSPECHOSA"
+        if txn["valor"] >= reglas["monto_atipico"]:
+            anomalias.append(_anomalia(
+                "MONTO_ATIPICO", "BAJO", 1, 0,
+                f"Monto {dinero(txn['valor'])} igual o mayor al límite de {dinero(reglas['monto_atipico'])}",
+            ))
+            if estado_txn == "APROBADA":
+                estado_txn = "SOSPECHOSA"
 
         transaccion_id = _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, llegada)
         if confirmar:
@@ -281,18 +288,21 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None,
         "fecha": a_texto(txn["fecha"]),
         "valor": txn["valor"],
         "estado": estado_txn,
+        # Como en la diapositiva 42: "Resultado ANOMALÍA" o "Resultado NORMAL".
+        "resultado": "ANOMALIA" if anomalias else "NORMAL",
+        "tipos": [a["tipo"] for a in anomalias],
         "anomalias": anomalias,
         "analisis": analisis,
     }
 
 
-def procesar_lote(db, estado, lista, llave, ip=None):
+def procesar_lote(db, estado, lista, llaves, aceptar_sha256_simple=True, ip=None):
     """Recibe transacciones desordenadas, las ordena cronológicamente con
     merge sort (divide y vencerás) y las analiza en ese orden."""
     if not isinstance(lista, list) or not lista:
         raise ErrorValidacion({"cuerpo": "Envía una lista JSON con al menos una transacción"})
-    if len(lista) > 500:
-        raise ErrorValidacion({"cuerpo": "Máximo 500 transacciones por lote"})
+    if len(lista) > 5000:
+        raise ErrorValidacion({"cuerpo": "Máximo 5000 transacciones por lote"})
 
     resultados, validas = [], []
     for posicion, crudo in enumerate(lista):
@@ -301,7 +311,7 @@ def procesar_lote(db, estado, lista, llave, ip=None):
         except ErrorValidacion as error:
             resultados.append({"posicion": posicion, "estado": "INVALIDA", "errores": error.detalles})
             continue
-        txn["hash_valido"] = hash_es_valido(crudo, crudo["hash"], llave)
+        txn["hash_valido"], txn["firma"] = verificar_hash(crudo, crudo["hash"], llaves, aceptar_sha256_simple)
         txn["posicion"] = posicion
         validas.append(txn)
 

@@ -31,7 +31,10 @@ def dashboard():
     rango = request.args.get("rango", "30d")
     if rango not in estadisticas.RANGOS:
         raise ErrorValidacion({"rango": f"Debe ser uno de: {', '.join(estadisticas.RANGOS)}"})
-    return ok({"dashboard": estadisticas.resumen(obtener_db(), estado_app(), rango)})
+    por = request.args.get("por", "txn")
+    if por not in estadisticas.COLUMNAS:
+        raise ErrorValidacion({"por": "Debe ser txn o llegada"})
+    return ok({"dashboard": estadisticas.resumen(obtener_db(), estado_app(), rango, por)})
 
 
 @bp.get("/anomalias")

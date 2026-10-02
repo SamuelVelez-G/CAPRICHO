@@ -10,19 +10,22 @@ No usa sesión ni CSRF: quien llama es la pasarela de pagos, y se
 autentica con la firma HMAC de cada transacción.
 
 Códigos de respuesta:
-    201  APROBADA o SOSPECHOSA (quedó registrada; si es sospechosa trae sus anomalías)
-    401  RECHAZADA por hash inválido
+    201  la transacción quedó registrada. El resultado va en el cuerpo:
+         "resultado": "NORMAL" o "ANOMALIA", "estado": APROBADA / SOSPECHOSA /
+         RECHAZADA y la lista de anomalías. Se responde 201 aunque sea fraude
+         porque la transacción SÍ se recibió y se registró (diapositiva 41:
+         "Anomalía -> Registrar"); así un generador no la toma como error ni
+         la reintenta.
     409  idTxn repetido (replay)
     422  campos nulos, vacíos o con formato inválido
-    429  RECHAZADA por ráfaga (5 en el mismo segundo)
     400  inyección SQL detectada
 """
 
-from flask import Blueprint, request
+from flask import Blueprint, current_app, request
 
 from ..db import obtener_db
 from ..errores import ErrorNoEncontrado, ErrorValidacion
-from ..seguridad import admin_requerido, hash_es_valido, llave_hmac, revisar_inyeccion
+from ..seguridad import admin_requerido, revisar_inyeccion, verificar_hash
 from ..servicios import detector, estadisticas
 from ..tiempo import ahora
 from ..validaciones import validar_transaccion
@@ -31,31 +34,38 @@ from . import entero_de_consulta, estado_app, ip_cliente, leer_json, ok
 bp = Blueprint("api_transacciones", __name__, url_prefix="/api/transacciones")
 
 
-def _codigo(resultado):
-    if resultado["estado"] != "RECHAZADA":
-        return 201
-    tipos = {a["tipo"] for a in resultado["anomalias"]}
-    return 401 if "HASH_INVALIDO" in tipos else 429
+def _verificar(crudo):
+    return verificar_hash(crudo, crudo["hash"], current_app.config["LLAVES_VERIFICACION"],
+                          current_app.config["ACEPTAR_SHA256_SIMPLE"])
+
+
+def _lote(datos):
+    resultado = detector.procesar_lote(obtener_db(), estado_app(), datos, current_app.config["LLAVES_VERIFICACION"],
+                                       current_app.config["ACEPTAR_SHA256_SIMPLE"], ip_cliente())
+    return ok({"lote": resultado}, 201)
 
 
 @bp.post("")
+@bp.post("/", strict_slashes=False)
 def recibir():
     llegada = ahora()
-    datos = leer_json()
+    datos = leer_json(forzar=True)
     revisar_inyeccion(datos)
+    if isinstance(datos, list):          # si llega una lista, se procesa como lote
+        return _lote(datos)
     txn = validar_transaccion(datos)
-    txn["hash_valido"] = hash_es_valido(datos, datos["hash"], llave_hmac())
+    txn["hash_valido"], txn["firma"] = _verificar(datos)
     resultado = detector.procesar_transaccion(obtener_db(), estado_app(), txn, origen="API",
                                               ip=ip_cliente(), llegada=llegada)
-    return ok({"transaccion": resultado}, _codigo(resultado))
+    return ok({"resultado": resultado["resultado"], "estado": resultado["estado"],
+               "anomalias": resultado["tipos"], "transaccion": resultado}, 201)
 
 
 @bp.post("/lote")
 def recibir_lote():
-    datos = leer_json()
+    datos = leer_json(forzar=True)
     revisar_inyeccion(datos)
-    resultado = detector.procesar_lote(obtener_db(), estado_app(), datos, llave_hmac(), ip_cliente())
-    return ok({"lote": resultado}, 201)
+    return _lote(datos)
 
 
 @bp.get("")

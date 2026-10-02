@@ -18,7 +18,7 @@ const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
 const TIPO_CORTO = { POSIBLE_FRAUDE: "Posible fraude", RAFAGA: "Ráfaga", HASH_INVALIDO: "Hash inválido",
   MONTO_ATIPICO: "Monto atípico", PRECIO_MANIPULADO: "Precio alterado" };
 
-const estado = { rango: "30d", datos: null, tipos: {}, paginaAnomalias: 1, paginaTxn: 1, vistas: {}, reglas: null, temporizador: null };
+const estado = { rango: "30d", por: "txn", casoVentana: null, casosVistos: "", datos: null, tipos: {}, paginaAnomalias: 1, paginaTxn: 1, vistas: {}, reglas: null, temporizador: null };
 const dash = document.getElementById("dash");
 
 // =============================================================================
@@ -26,7 +26,7 @@ const dash = document.getElementById("dash");
 // =============================================================================
 async function cargar({ silencioso = false } = {}) {
   if (!silencioso) dash.classList.add("cargando");
-  const { ok, datos } = await api("GET", `/api/dashboard?rango=${estado.rango}`);
+  const { ok, datos } = await api("GET", `/api/dashboard?rango=${estado.rango}&por=${estado.por}`);
   dash.classList.remove("cargando");
   if (!ok) {
     toast(datos.error || "No se pudo cargar el dashboard", "error");
@@ -51,6 +51,8 @@ function pintar() {
   pintarEstados(d);
   pintarGraficas();
   pintarListas(d);
+  pintarFirmas(d);
+  pintarVentanaEnVivo(d);
   pintarPila(d.eventos);
   if (!estado.reglas) cargarReglas(d.reglas);
 }
@@ -146,6 +148,63 @@ function pintarListas(d) {
     el("td", { text: fechaCorta(m.fecha_txn) })))
     : [el("tr", {}, el("td", { colspan: "4", class: "muted", text: "Sin casos en el rango." }))]));
 }
+
+function pintarFirmas(d) {
+  const lista = document.getElementById("firmas");
+  if (!d.firmas.length) {
+    vaciar(lista, el("li", {}, el("span", { class: "muted", text: "Aún no hay transacciones en el rango." })));
+    return;
+  }
+  vaciar(lista, ...d.firmas.map((f) => el("li", {},
+    el("span", {}, icono(f.firma === "Hash inválido" ? "bloqueo" : "llave"), ` ${f.firma}`),
+    el("span", { text: numero(f.cantidad) }))));
+}
+
+// --- Ventana deslizante visible en el dashboard ----------------------------------
+async function pintarVentanaEnVivo(d) {
+  const selector = document.getElementById("caso-ventana");
+  const casos = d.multiples;
+  const firma = casos.map((c) => c.id).join(",");
+  if (firma === estado.casosVistos) return;          // nada nuevo: no se interrumpe la animación
+  const habia = estado.casosVistos !== "";
+  estado.casosVistos = firma;
+  if (!casos.length) {
+    vaciar(selector, el("option", { text: "Aún no hay casos de múltiples transacciones" }));
+    vaciar(document.getElementById("g-ventana"), el("p", { class: "muted",
+      text: "Cuando un usuario haga varias transacciones dentro de la ventana, aquí se verá cómo se detectó." }));
+    document.getElementById("conteo-ventana").textContent = "";
+    return;
+  }
+  vaciar(selector, ...casos.map((c) => el("option", { value: c.id,
+    text: `#${c.id} · ${c.email} · ${c.cantidad_transacciones} en ${numero(c.ventana_segundos, c.ventana_segundos % 1 ? 1 : 0)} s · ${fechaCorta(c.fecha_txn)}` })));
+  // Si llegó un caso nuevo (o es la primera carga), se muestra el más reciente.
+  if (!habia || !casos.some((c) => String(c.id) === String(estado.casoVentana)) || casos[0].id !== Number(estado.casoVentana)) {
+    estado.casoVentana = casos[0].id;
+  }
+  selector.value = String(estado.casoVentana);
+  await mostrarCasoVentana(estado.casoVentana, true);
+}
+
+let animacionVentana = null;
+async function mostrarCasoVentana(id, reproducir) {
+  const { ok, datos } = await api("GET", `/api/anomalias/${id}`);
+  if (!ok) return;
+  const a = datos.anomalia;
+  const umbral = umbralDe(a);
+  const conteo = document.getElementById("conteo-ventana");
+  animacionVentana = ventanaDeslizante(document.getElementById("g-ventana"), datos.ventana, a.ventana_segundos,
+    datos.margen_segundos, (n, fin) => {
+      conteo.textContent = `${a.email} · ventana que termina en ${fin >= 0 ? "+" : ""}${numero(fin, 1)} s: ` +
+        `${n} transacciones adentro` + (umbral && n >= umbral ? ` → llega al umbral (${umbral}): ANOMALÍA` : "");
+    });
+  if (reproducir) animacionVentana.reproducir();
+}
+
+document.getElementById("caso-ventana").addEventListener("change", (evento) => {
+  estado.casoVentana = Number(evento.target.value);
+  mostrarCasoVentana(estado.casoVentana, true);
+});
+document.getElementById("reproducir-ventana").addEventListener("click", () => animacionVentana?.reproducir());
 
 function pintarPila(eventos) {
   const caja = document.getElementById("pila-mini");
@@ -415,6 +474,7 @@ function cargarReglas(reglas) {
   formReglas.rafaga_maximo.value = reglas.rafaga.maximo;
   formReglas.rafaga_ventana.value = reglas.rafaga.ventana_segundos;
   formReglas.monto.value = reglas.monto_atipico;
+  formReglas.rafaga_llegada.checked = Boolean(reglas.rafaga.por_llegada);
   vaciar(document.getElementById("r-franjas"), ...reglas.franjas.map((f) => el("tr", { dataset: { clave: f.clave } },
     el("td", { text: f.nombre }),
     el("td", { class: "muted", text: `${sumarSegundo(f.desde)} – ${f.hasta}` }),
@@ -439,14 +499,17 @@ function leerReglas() {
       ventana_segundos: aNumero(formReglas[`franja_${f.clave}_ventana`].value),
       umbral: aNumero(formReglas[`franja_${f.clave}_umbral`].value),
     })),
-    rafaga: { maximo: aNumero(formReglas.rafaga_maximo.value), ventana_segundos: aNumero(formReglas.rafaga_ventana.value) },
+    rafaga: { maximo: aNumero(formReglas.rafaga_maximo.value), ventana_segundos: aNumero(formReglas.rafaga_ventana.value),
+      por_llegada: formReglas.rafaga_llegada.checked },
     monto_atipico: aNumero(formReglas.monto.value),
   };
 }
 
 function soloCambios(nuevas) {
   const cambios = {};
-  const actuales = { ...estado.reglas, franjas: estado.reglas.franjas.map((f) => ({ clave: f.clave, ventana_segundos: f.ventana_segundos, umbral: f.umbral })) };
+  const actuales = { ...estado.reglas,
+    rafaga: { por_llegada: false, ...estado.reglas.rafaga },
+    franjas: estado.reglas.franjas.map((f) => ({ clave: f.clave, ventana_segundos: f.ventana_segundos, umbral: f.umbral })) };
   for (const [clave, valor] of Object.entries(nuevas)) {
     if (JSON.stringify(valor) !== JSON.stringify(actuales[clave])) cambios[clave] = valor;
   }
@@ -485,6 +548,14 @@ document.getElementById("rango").addEventListener("click", (evento) => {
   if (!boton) return;
   estado.rango = boton.dataset.rango;
   document.querySelectorAll("#rango button").forEach((b) => b.setAttribute("aria-pressed", String(b === boton)));
+  cargar();
+});
+
+document.getElementById("por").addEventListener("click", (evento) => {
+  const boton = evento.target.closest("button[data-por]");
+  if (!boton) return;
+  estado.por = boton.dataset.por;
+  document.querySelectorAll("#por button").forEach((b) => b.setAttribute("aria-pressed", String(b === boton)));
   cargar();
 });
 

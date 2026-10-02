@@ -12,7 +12,7 @@ from datetime import datetime
 
 # Formato que acepta el endpoint (diapositiva 40): "2026-09-23T10:30:01.120"
 PATRON_FECHA_ISO = re.compile(
-    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})?$"
+    r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:?\d{2})?$"
 )
 
 

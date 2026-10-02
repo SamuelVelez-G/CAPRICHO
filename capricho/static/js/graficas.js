@@ -230,7 +230,7 @@ export function ventanaDeslizante(contenedor, puntos, ventana, margenSegundos, a
   }
 
   function ubicar(fin) {
-    const dentro = puntos.filter((p) => p.hash_valido && p.desfase > fin - ventana && p.desfase <= fin);
+    const dentro = puntos.filter((p) => p.desfase > fin - ventana && p.desfase <= fin);
     const x1 = escalaX(Math.max(-margenSegundos, fin - ventana));
     const x2 = escalaX(Math.min(margenSegundos, fin));
     caja.setAttribute("x", x1);
@@ -253,7 +253,7 @@ export function ventanaDeslizante(contenedor, puntos, ventana, margenSegundos, a
     reproducir() {
       cancelAnimationFrame(animacion);
       const inicio = performance.now();
-      const duracion = 4200;
+      const duracion = 6500;
       const desde = -margenSegundos + ventana;
       const hasta = margenSegundos;
       const cuadro = (ahora) => {

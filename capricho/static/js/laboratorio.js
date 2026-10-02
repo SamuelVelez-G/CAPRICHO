@@ -190,7 +190,7 @@ const ESCENARIOS = [
   },
   {
     nombre: "5 en el mismo segundo", detalle: "Ráfaga: 5 pagos en menos de 1 s",
-    esperado: "la quinta RECHAZADA con 429 (RAFAGA, crítico)",
+    esperado: "la quinta RECHAZADA (RAFAGA, crítico)",
     async correr(s) {
       const inicio = new Date();
       for (let i = 0; i < 5; i++) await mandar(`r+${s}@r.com`, isoLocal(new Date(inicio.getTime() + i * 150)));
@@ -198,12 +198,12 @@ const ESCENARIOS = [
   },
   {
     nombre: "Hash alterado", detalle: "Se firma y después se cambia el valor",
-    esperado: "401: RECHAZADA (HASH_INVALIDO)",
+    esperado: "RECHAZADA (HASH_INVALIDO, crítico)",
     async correr(s) { await mandar(`h+${s}@h.com`, isoLocal(new Date()), "alterar"); },
   },
   {
     nombre: "Firma falsa", detalle: "Hash de 64 caracteres inventado",
-    esperado: "401: sin la llave no se puede falsificar",
+    esperado: "RECHAZADA: sin la llave no se puede falsificar",
     async correr(s) { await mandar(`f+${s}@f.com`, isoLocal(new Date()), "inventada"); },
   },
   {
@@ -222,11 +222,11 @@ const ESCENARIOS = [
     },
   },
   {
-    nombre: "Tipos equivocados", detalle: "value como texto, fecha en otro formato",
+    nombre: "Tipos equivocados", detalle: "value con letras, fecha en otro formato",
     esperado: "422: no se aceptan tipos incorrectos",
     async correr() {
       await enviar("/api/transacciones", { idTxn: nuevoId(), user: "t@t.com", date: "23/09/2026 10:30",
-        value: "50000", paymentMethod: "Bitcoin", hash: hexAlAzar() });
+        value: "cincuenta mil", paymentMethod: "Bitcoin", hash: hexAlAzar() });
     },
   },
   {
