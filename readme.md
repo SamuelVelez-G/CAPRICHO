@@ -15,6 +15,24 @@ reúne lo mejor de los dos trabajos anteriores:
 
 ---
 
+## Demo en línea
+
+**[samuelvelez-g.github.io/CAPRICHO](https://samuelvelez-g.github.io/CAPRICHO/)**
+
+Versión estática publicada con GitHub Pages: la tienda, el dashboard, el
+laboratorio y la operación con los mismos estilos, recorribles con datos de
+demostración. Como GitHub Pages no ejecuta Python, ahí no se pueden enviar
+transacciones ni pagar; para el sistema completo (endpoint, detector en vivo,
+base de datos) hay que ejecutar el proyecto como se explica abajo.
+
+| Tienda | Dashboard antifraude |
+|---|---|
+| [![Tienda de Capricho](docs/capturas/tienda.png)](https://samuelvelez-g.github.io/CAPRICHO/) | [![Dashboard antifraude](docs/capturas/dashboard.png)](https://samuelvelez-g.github.io/CAPRICHO/dashboard.html) |
+
+[![Laboratorio antifraude](docs/capturas/laboratorio.png)](https://samuelvelez-g.github.io/CAPRICHO/laboratorio.html)
+
+---
+
 ## Cómo ejecutarlo
 
 Necesita **Python 3.10 o superior**.
@@ -66,7 +84,7 @@ y cuentas), así el dashboard muestra únicamente lo que él envíe:
 python run.py --reiniciar --limpio
 ```
 
-Pruebas automáticas (50 pruebas: casos de uso, formatos del generador, seguridad, formularios y métodos HTTP):
+Pruebas automáticas (55 pruebas: casos de uso, franjas, formatos del generador, separación de datos en vivo y demo, seguridad, formularios y métodos HTTP):
 
 ```bash
 python -m unittest discover -s tests -t .
@@ -93,6 +111,42 @@ dominio fijo gratuito del panel). Las dos terminales y el computador deben
 quedar encendidos durante la prueba.
 
 Alternativa sin cuenta: `cloudflared tunnel --url http://localhost:5000`.
+
+---
+
+## Datos en vivo y datos de demo
+
+Todo vive en la misma base de datos, pero cada transacción guarda su `origen`:
+`API` y `LOTE` (lo que llega al endpoint: el generador del profesor, el
+laboratorio), `TIENDA` (compras) y `DEMO` (lo que siembra la demostración).
+Arriba del dashboard se elige qué datos ver y **todas** las tarjetas,
+gráficas, tablas y la pila de errores usan esa misma elección:
+
+| Datos | Qué incluye |
+|---|---|
+| **En vivo** (por defecto) | API, lotes y tienda. Nunca mezcla la demo |
+| **Demo** | Solo los datos sembrados |
+| **Todo** | Ambos, con el conteo por origen en el encabezado |
+
+El rango (hoy, 7, 30, 90 días, todo) y el tipo de fecha (la de la transacción
+o la de llegada al servidor) también aplican a todo el dashboard, incluidas las
+tablas de anomalías y de transacciones. Para una prueba sin ningún dato de demo:
+`python run.py --reiniciar --limpio`.
+
+---
+
+## Publicar la demo en GitHub Pages
+
+La carpeta `docs/` es la demo estática. Se vuelve a generar después de cambiar
+la aplicación:
+
+```bash
+python herramientas/exportar_demo.py
+```
+
+El script arranca la app con datos de demostración en una base temporal y
+guarda cada página como HTML y cada consulta GET como JSON. En GitHub:
+**Settings → Pages → Deploy from a branch → `main` → `/docs` → Save**.
 
 ---
 
@@ -259,7 +313,8 @@ capricho/
   servicios/           detector, pedidos, catálogo, domicilios, estadísticas, anomalías
   rutas/               endpoints de la API y páginas
   templates/ static/   interfaz (HTML, CSS y JavaScript sin librerías externas)
-herramientas/          script para enviar transacciones desde la terminal
+herramientas/          enviar transacciones desde la terminal y exportar la demo estática
+docs/                  demo estática para GitHub Pages (generada) y capturas
 tests/                 pruebas automáticas
 run.py                 arranque
 ```

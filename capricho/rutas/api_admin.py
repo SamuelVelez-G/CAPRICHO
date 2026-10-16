@@ -20,7 +20,7 @@ from ..registro import logger
 from ..seguridad import admin_requerido, exigir_csrf, revisar_inyeccion, usuario_actual
 from ..servicios import anomalias, detector, estadisticas
 from ..validaciones import exigir_objeto, validar_reglas
-from . import entero_de_consulta, estado_app, leer_json, ok
+from . import entero_de_consulta, estado_app, filtro_de_consulta, leer_json, ok
 
 bp = Blueprint("api_admin", __name__, url_prefix="/api")
 
@@ -28,13 +28,7 @@ bp = Blueprint("api_admin", __name__, url_prefix="/api")
 @bp.get("/dashboard")
 @admin_requerido
 def dashboard():
-    rango = request.args.get("rango", "30d")
-    if rango not in estadisticas.RANGOS:
-        raise ErrorValidacion({"rango": f"Debe ser uno de: {', '.join(estadisticas.RANGOS)}"})
-    por = request.args.get("por", "txn")
-    if por not in estadisticas.COLUMNAS:
-        raise ErrorValidacion({"por": "Debe ser txn o llegada"})
-    return ok({"dashboard": estadisticas.resumen(obtener_db(), estado_app(), rango, por)})
+    return ok({"dashboard": estadisticas.resumen(obtener_db(), estado_app(), filtro_de_consulta())})
 
 
 @bp.get("/anomalias")
@@ -42,6 +36,7 @@ def dashboard():
 def listar_anomalias():
     return ok(anomalias.listar(
         obtener_db(),
+        filtro_de_consulta(rango="todo", fuente="todo"),
         estado=request.args.get("estado") or None,
         nivel=request.args.get("nivel") or None,
         tipo=request.args.get("tipo") or None,
@@ -106,7 +101,7 @@ def actualizar_configuracion():
 def eventos():
     estado = estado_app()
     with estado.candado:
-        pila = estado.pila_errores.elementos()
+        pila = estadisticas.filtrar_eventos(estado.pila_errores.elementos(), filtro_de_consulta(fuente="todo"))
     return ok({"eventos": pila[:50], "total": len(pila)})
 
 

@@ -4,7 +4,7 @@
  * laboratorio en otra pestaña, los ve aparecer aquí.
  */
 
-import { api, dinero, el, fechaCorta, icono, insignia, modal, mostrarErrores, nivel, numero, toast, vaciar } from "./comun.js";
+import { ESTATICO, api, dinero, el, fechaCorta, icono, insignia, modal, mostrarErrores, nivel, numero, toast, vaciar } from "./comun.js";
 import { barrasHorizontales, columnasApiladas, mapaCalor, tabla, ventanaDeslizante } from "./graficas.js";
 
 const css = (nombre) => getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
@@ -18,15 +18,22 @@ const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
 const TIPO_CORTO = { POSIBLE_FRAUDE: "Posible fraude", RAFAGA: "Ráfaga", HASH_INVALIDO: "Hash inválido",
   MONTO_ATIPICO: "Monto atípico", PRECIO_MANIPULADO: "Precio alterado" };
 
-const estado = { rango: "30d", por: "txn", casoVentana: null, casosVistos: "", datos: null, tipos: {}, paginaAnomalias: 1, paginaTxn: 1, vistas: {}, reglas: null, temporizador: null };
+const estado = { fuente: "vivo", rango: "30d", por: "txn", casoVentana: null, casosVistos: "", datos: null, tipos: {}, paginaAnomalias: 1, paginaTxn: 1, vistas: {}, reglas: null, temporizador: null };
 const dash = document.getElementById("dash");
 
 // =============================================================================
 //  Carga y refresco
 // =============================================================================
+/** Los tres filtros de arriba. TODAS las consultas del dashboard los mandan. */
+function parametrosFiltro(extra = {}) {
+  return new URLSearchParams({ fuente: estado.fuente, rango: estado.rango, por: estado.por, ...extra }).toString();
+}
+
+const ORIGEN = { API: "API", LOTE: "Lote", TIENDA: "Tienda", DEMO: "Demo" };
+
 async function cargar({ silencioso = false } = {}) {
   if (!silencioso) dash.classList.add("cargando");
-  const { ok, datos } = await api("GET", `/api/dashboard?rango=${estado.rango}&por=${estado.por}`);
+  const { ok, datos } = await api("GET", `/api/dashboard?${parametrosFiltro()}`);
   dash.classList.remove("cargando");
   if (!ok) {
     toast(datos.error || "No se pudo cargar el dashboard", "error");
@@ -39,8 +46,10 @@ async function cargar({ silencioso = false } = {}) {
 function pintar() {
   const d = estado.datos;
   const hora = d.generado.slice(11, 19);
+  const origenes = Object.entries(d.origenes).map(([o, n]) => `${numero(n)} ${ORIGEN[o] || o}`).join(" · ");
   document.getElementById("dash-generado").textContent =
-    `${numero(d.totales.transacciones)} transacciones y ${numero(d.totales.anomalias)} anomalías en el rango · actualizado ${hora}`;
+    `${d.fuente_nombre}. ${numero(d.totales.transacciones)} transacciones y ${numero(d.totales.anomalias)} anomalías ` +
+    `en el rango${origenes ? ` (${origenes})` : ""} · actualizado ${hora}`;
 
   for (const [grupo, prefijo] of [["transacciones", "txn"], ["anomalias", "anom"]]) {
     for (const periodo of ["hoy", "semana", "mes"]) {
@@ -304,7 +313,7 @@ new ResizeObserver(() => {
 //  Anomalías: tabla, detalle y cambio de estado
 // =============================================================================
 async function cargarAnomalias() {
-  const filtros = new URLSearchParams({ pagina: estado.paginaAnomalias });
+  const filtros = new URLSearchParams(parametrosFiltro({ pagina: estado.paginaAnomalias }));
   for (const [id, clave] of [["f-estado", "estado"], ["f-nivel", "nivel"], ["f-tipo", "tipo"]]) {
     const valor = document.getElementById(id).value;
     if (valor) filtros.set(clave, valor);
@@ -319,9 +328,10 @@ async function cargarAnomalias() {
     el("td", { class: "correo", text: a.email, title: a.email }),
     el("td", { class: "num", text: dinero(a.valor) }),
     el("td", { text: fechaCorta(a.fecha_txn) }),
+    el("td", { text: ORIGEN[a.origen] || a.origen }),
     el("td", {}, insignia(a.estado)),
     el("td", {}, el("button", { class: "boton boton--xs boton--contorno", type: "button", onClick: () => abrirAnomalia(a.id) }, "Ver")))) :
-    [el("tr", {}, el("td", { colspan: "8", class: "muted", text: "No hay anomalías con esos filtros." }))]));
+    [el("tr", {}, el("td", { colspan: "9", class: "muted", text: "No hay anomalías con esos filtros." }))]));
   document.getElementById("info-anomalias").textContent = `${numero(datos.total)} anomalías · página ${datos.pagina} de ${datos.paginas}`;
   document.getElementById("anom-prev").disabled = datos.pagina <= 1;
   document.getElementById("anom-sig").disabled = datos.pagina >= datos.paginas;
@@ -428,7 +438,7 @@ function umbralDe(anomalia) {
 //  Transacciones
 // =============================================================================
 async function cargarTransacciones() {
-  const filtros = new URLSearchParams({ pagina: estado.paginaTxn });
+  const filtros = new URLSearchParams(parametrosFiltro({ pagina: estado.paginaTxn }));
   const valorEstado = document.getElementById("t-estado").value;
   const busqueda = document.getElementById("t-busqueda").value.trim();
   if (valorEstado) filtros.set("estado", valorEstado);
@@ -444,7 +454,7 @@ async function cargarTransacciones() {
     el("td", { class: "num", text: dinero(t.valor) }),
     el("td", { text: fechaCorta(t.fecha_txn) }),
     el("td", { text: t.metodo_pago }),
-    el("td", { text: t.origen }),
+    el("td", { text: ORIGEN[t.origen] || t.origen }),
     el("td", {}, insignia(t.estado), t.tipos ? el("div", { class: "muted", text: t.tipos.replaceAll(",", ", ") }) : null)))
     : [el("tr", {}, el("td", { colspan: "7", class: "muted", text: "Sin resultados." }))]));
   document.getElementById("info-transacciones").textContent = `${numero(datos.total)} transacciones · página ${datos.pagina} de ${datos.paginas}`;
@@ -543,21 +553,21 @@ document.getElementById("guardar-put").addEventListener("click", () => guardarRe
 // =============================================================================
 //  Filtros de rango y modo en vivo
 // =============================================================================
-document.getElementById("rango").addEventListener("click", (evento) => {
-  const boton = evento.target.closest("button[data-rango]");
-  if (!boton) return;
-  estado.rango = boton.dataset.rango;
-  document.querySelectorAll("#rango button").forEach((b) => b.setAttribute("aria-pressed", String(b === boton)));
-  cargar();
-});
-
-document.getElementById("por").addEventListener("click", (evento) => {
-  const boton = evento.target.closest("button[data-por]");
-  if (!boton) return;
-  estado.por = boton.dataset.por;
-  document.querySelectorAll("#por button").forEach((b) => b.setAttribute("aria-pressed", String(b === boton)));
-  cargar();
-});
+// Cambiar cualquier filtro recarga TODO: tarjetas, gráficas y tablas.
+for (const [grupo, clave] of [["fuente", "fuente"], ["rango", "rango"], ["por", "por"]]) {
+  document.getElementById(grupo).addEventListener("click", (evento) => {
+    const boton = evento.target.closest(`button[data-${clave}]`);
+    if (!boton) return;
+    estado[clave] = boton.dataset[clave];
+    document.querySelectorAll(`#${grupo} button`).forEach((b) => b.setAttribute("aria-pressed", String(b === boton)));
+    estado.paginaAnomalias = 1;
+    estado.paginaTxn = 1;
+    estado.casosVistos = "";
+    cargar();
+    cargarAnomalias();
+    cargarTransacciones();
+  });
+}
 
 function programarRefresco() {
   clearInterval(estado.temporizador);
@@ -575,6 +585,17 @@ document.getElementById("en-vivo").addEventListener("change", programarRefresco)
 
 // =============================================================================
 async function iniciar() {
+  if (ESTATICO) {
+    // En GitHub Pages solo existen los datos de la demo y no cambian.
+    estado.fuente = "demo";
+    document.getElementById("fuente").hidden = true;
+    document.getElementById("en-vivo").checked = false;
+    document.getElementById("en-vivo").closest("label").hidden = true;
+    document.getElementById("form-reglas").querySelectorAll("button").forEach((b) => { b.disabled = true; });
+    const buscador = document.getElementById("t-busqueda");
+    buscador.disabled = true;
+    buscador.placeholder = "Búsqueda: ejecuta el proyecto";
+  }
   const { ok, datos } = await api("GET", "/api/configuracion");
   if (ok) {
     estado.tipos = datos.tipos;
@@ -584,7 +605,7 @@ async function iniciar() {
   await cargar();
   cargarAnomalias();
   cargarTransacciones();
-  programarRefresco();
+  if (!ESTATICO) programarRefresco();
 }
 
 iniciar();

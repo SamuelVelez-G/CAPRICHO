@@ -200,6 +200,58 @@ class FormatosDelGenerador(PruebaCapricho):
         self.assertEqual(set(estados), {"APROBADA"})
 
 
+class DatosEnVivoYDemo(PruebaCapricho):
+    """El dashboard no debe mezclar los datos de demostración con los que llegan en vivo."""
+
+    def setUp(self):
+        super().setUp()
+        from capricho.servicios import detector
+        from capricho.registro import registrar_evento
+        from capricho.db import conectar
+        estado = self.app.extensions["capricho"]
+        conexion = conectar(self.app.config["BASE_DATOS"])
+        # 4 transacciones de demo (una ráfaga de 3 + 1 suelta) y un error sembrado.
+        for n, segundo in enumerate((1, 2, 3, 40)):
+            txn = {"id_txn": f"D{n}", "email": "demo@demo.com", "fecha": self.a_las(10, 0, segundo),
+                   "valor": 10000, "metodo_pago": "Nequi", "hash": "x", "hash_valido": True}
+            detector.procesar_transaccion(conexion, estado, txn, origen="DEMO", llegada=self.a_las(10, 0, segundo))
+        registrar_evento(conexion, estado, "VALIDACION", "BAJO", "sembrado")
+        conexion.execute("UPDATE eventos SET demo = 1")
+        conexion.commit()
+        estado.reconstruir(conexion)
+        conexion.close()
+        # 2 transacciones en vivo por la API.
+        self.enviar_txn("vivo@vivo.com", self.a_las(10, 0, 1))
+        self.enviar_txn("vivo@vivo.com", self.a_las(11, 0, 1))
+        self.como_admin()
+
+    def tablero(self, fuente):
+        return self.cliente.get(f"/api/dashboard?fuente={fuente}&rango=todo").get_json()["dashboard"]
+
+    def test_cada_fuente_cuenta_solo_lo_suyo(self):
+        vivo, demo, todo = self.tablero("vivo"), self.tablero("demo"), self.tablero("todo")
+        self.assertEqual(vivo["totales"]["transacciones"], 2)
+        self.assertEqual(demo["totales"]["transacciones"], 4)
+        self.assertEqual(todo["totales"]["transacciones"], 6)
+        self.assertEqual(vivo["totales"]["anomalias"], 0)
+        self.assertEqual(demo["totales"]["anomalias"], 1)
+        self.assertEqual(vivo["origenes"], {"API": 2})
+        self.assertEqual(vivo["multiples"], [])
+        self.assertEqual(vivo["eventos"]["total"], 0)
+        self.assertEqual(demo["eventos"]["total"], 1)
+
+    def test_las_tablas_usan_el_mismo_filtro(self):
+        transacciones = self.cliente.get("/api/transacciones?fuente=vivo&rango=todo").get_json()
+        self.assertEqual(transacciones["total"], 2)
+        anomalias = self.cliente.get("/api/anomalias?fuente=vivo&rango=todo").get_json()
+        self.assertEqual(anomalias["total"], 0)
+        anomalias = self.cliente.get("/api/anomalias?fuente=demo&rango=todo").get_json()
+        self.assertEqual(anomalias["total"], 1)
+
+    def test_fuente_invalida(self):
+        self.assertEqual(self.cliente.get("/api/dashboard?fuente=otra").status_code, 422)
+
+
 class Configuracion(PruebaCapricho):
     def test_franjas_de_la_diapositiva_38(self):
         self.como_admin()

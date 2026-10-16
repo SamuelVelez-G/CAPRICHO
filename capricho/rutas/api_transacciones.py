@@ -29,7 +29,7 @@ from ..seguridad import admin_requerido, revisar_inyeccion, verificar_hash
 from ..servicios import detector, estadisticas
 from ..tiempo import ahora
 from ..validaciones import validar_transaccion
-from . import entero_de_consulta, estado_app, ip_cliente, leer_json, ok
+from . import entero_de_consulta, estado_app, filtro_de_consulta, ip_cliente, leer_json, ok
 
 bp = Blueprint("api_transacciones", __name__, url_prefix="/api/transacciones")
 
@@ -79,7 +79,8 @@ def listar():
         if len(busqueda) > 60:
             raise ErrorValidacion({"q": "Máximo 60 caracteres"})
         revisar_inyeccion({"q": busqueda})
-    return ok(estadisticas.listar_transacciones(obtener_db(), estado, busqueda, entero_de_consulta("pagina")))
+    filtro = filtro_de_consulta(rango="todo", fuente="todo")
+    return ok(estadisticas.listar_transacciones(obtener_db(), filtro, estado, busqueda, entero_de_consulta("pagina")))
 
 
 @bp.get("/<id_txn>")

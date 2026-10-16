@@ -8,12 +8,70 @@
 
 const RUTA_ICONOS = document.body.dataset.iconos;
 
+// Demo estática (GitHub Pages): no hay servidor, así que las consultas GET se
+// leen de archivos JSON exportados con herramientas/exportar_demo.py y no se
+// puede enviar nada. La exportación fija la fuente en "demo".
+export const ESTATICO = document.body.dataset.estatico === "1";
+const MENSAJE_ESTATICO = "Esta es la demo estática de GitHub Pages: aquí no se pueden enviar datos. "
+  + "Para probar el detector en vivo, ejecuta el proyecto con python run.py.";
+
+/** Mismo nombre de archivo que calcula herramientas/exportar_demo.py. */
+export function archivoEstatico(url) {
+  const u = new URL(url, "http://local");
+  const parametros = [...u.searchParams.entries()]
+    .filter(([clave]) => clave !== "fuente" && clave !== "por")
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([clave, valor]) => `${clave}-${valor}`);
+  const nombre = u.pathname.replace(/^\/api\//, "").replace(/\//g, "_") + (parametros.length ? `__${parametros.join("_")}` : "");
+  return `api/${nombre.replace(/[^A-Za-z0-9_-]/g, "_")}.json`;
+}
+
+let indiceEstatico = null;
+async function apiEstatica(metodo, url) {
+  if (metodo !== "GET") return { status: 0, ok: false, ms: 0, datos: { ok: false, error: MENSAJE_ESTATICO } };
+  const ruta = new URL(url, "http://local").pathname;
+  const busqueda = ruta.match(/^\/api\/transacciones\/([^/]+)$/);
+  if (busqueda) {
+    // Búsqueda por índice: un solo archivo con el diccionario idTxn -> transacción.
+    indiceEstatico ??= await fetch("api/indice_transacciones.json").then((r) => r.json()).catch(() => ({}));
+    const clave = decodeURIComponent(busqueda[1]);
+    const encontrada = indiceEstatico[clave];
+    return encontrada ? { status: 200, ok: true, ms: 1, datos: encontrada }
+      : { status: 404, ok: false, ms: 1, datos: { ok: false, error: `No existe la transacción ${clave}` } };
+  }
+  try {
+    const respuesta = await fetch(archivoEstatico(url));
+    if (respuesta.ok) return { status: 200, ok: true, ms: 1, datos: await respuesta.json() };
+  } catch { /* sigue abajo */ }
+  return { status: 404, ok: false, ms: 0, datos: { ok: false,
+    error: "Esta combinación de filtros no se incluyó en la demo estática. Ejecuta el proyecto para verla completa." } };
+}
+
+const PAGINAS_ESTATICAS = { "/": "index.html", "/laboratorio": "laboratorio.html", "/dashboard": "dashboard.html",
+  "/operacion": "operacion.html", "/pagar": "pagar.html", "/ingresar": "ingresar.html", "/registro": "registro.html",
+  "/mis-pedidos": "index.html" };
+
+if (ESTATICO) {
+  // Los enlaces que el JavaScript arma con rutas del servidor ("/#arma",
+  // "/mis-pedidos") se llevan a la página estática equivalente.
+  document.addEventListener("click", (evento) => {
+    const enlace = evento.target.closest('a[href^="/"]');
+    if (!enlace) return;
+    const destino = new URL(enlace.getAttribute("href"), "http://local");
+    const pagina = PAGINAS_ESTATICAS[destino.pathname];
+    if (!pagina) return;
+    evento.preventDefault();
+    window.location.href = pagina + destino.hash;
+  }, true);
+}
+
 export function csrf() {
   return document.querySelector('meta[name="csrf-token"]').content;
 }
 
 /** fetch con JSON, cookie de sesión y token CSRF. Nunca lanza por códigos HTTP. */
 export async function api(metodo, url, cuerpo) {
+  if (ESTATICO) return apiEstatica(metodo, url);
   const opciones = { method: metodo, credentials: "same-origin", headers: { Accept: "application/json" } };
   if (cuerpo !== undefined) {
     opciones.headers["Content-Type"] = "application/json";

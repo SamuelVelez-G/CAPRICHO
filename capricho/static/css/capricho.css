@@ -702,6 +702,12 @@ fieldset.paso > legend { padding: 0; }
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
+/* --- Demo estática (GitHub Pages) ------------------------------------------- */
+.aviso-estatico { background: var(--crema); color: var(--vino-profundo); border-bottom: 2px solid var(--vino); }
+.aviso-estatico .contenedor { display: flex; align-items: center; gap: 10px; padding-top: 10px; padding-bottom: 10px; font-size: .92rem; font-weight: 600; }
+.aviso-estatico code { background: rgba(117, 56, 63, .12); padding: 1px 6px; border-radius: 5px; }
+[data-estatico="1"] #boton-salir { display: none; }
+
 /* --- Utilidades ------------------------------------------------------------ */
 .casilla { display: flex; align-items: center; gap: 8px; font-size: .92rem; font-weight: 600; }
 .casilla input { width: 18px; height: 18px; accent-color: var(--vino); }

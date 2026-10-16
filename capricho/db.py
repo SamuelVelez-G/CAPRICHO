@@ -46,6 +46,8 @@ def crear_esquema(conexion: sqlite3.Connection):
     columnas = {fila[1] for fila in conexion.execute("PRAGMA table_info(transacciones)")}
     if "firma" not in columnas:
         conexion.execute("ALTER TABLE transacciones ADD COLUMN firma TEXT")
+    if "demo" not in {fila[1] for fila in conexion.execute("PRAGMA table_info(eventos)")}:
+        conexion.execute("ALTER TABLE eventos ADD COLUMN demo INTEGER NOT NULL DEFAULT 0")
     conexion.commit()
 
 

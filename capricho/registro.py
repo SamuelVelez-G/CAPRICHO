@@ -54,7 +54,7 @@ def registrar_evento(db, estado, tipo, nivel, detalle, *, ruta=None, metodo=None
         db.commit()
     evento = {
         "id": cursor.lastrowid, "tipo": tipo, "nivel": nivel, "detalle": detalle[:500],
-        "ruta": ruta, "metodo": metodo, "ip": ip, "email": email, "fecha": a_texto(momento),
+        "ruta": ruta, "metodo": metodo, "ip": ip, "email": email, "fecha": a_texto(momento), "demo": 0,
     }
     with estado.candado:
         estado.pila_errores.apilar(evento)

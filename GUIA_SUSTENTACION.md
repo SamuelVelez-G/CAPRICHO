@@ -91,6 +91,9 @@ la ventana de 6 segundos (tarde-noche) y desde las 20:00:01 la de 3 segundos
 
 ## 4. Preguntas probables
 
+**¿Por qué antes se inflaban los datos y cómo lo corrigieron?**
+Los datos de demostración y los que llegaban por la API estaban en la misma base, y unas partes del dashboard filtraban por fecha y otras no. Ahora cada transacción guarda su origen (API, lote, tienda o demo) y arriba del dashboard se elige **En vivo**, **Demo** o **Todo**. Esa elección, junto con el rango y el tipo de fecha, la usan todas las tarjetas, gráficas, tablas y la pila de errores. En vivo nunca incluye la demo, y el encabezado muestra cuántas transacciones hay de cada origen.
+
 **¿Qué es la ventana deslizante y por qué la usaron?**
 Es mirar solo un pedazo de los datos (los últimos 3 segundos de un usuario) y moverlo. En vez de comparar cada transacción con todas las demás, que sería O(n²), cada vez que llega una se agrega a la ventana, se sacan las que quedaron por fuera y se cuenta. Cada elemento entra y sale una sola vez: O(n).
 

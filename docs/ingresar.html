@@ -1,0 +1,122 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="_BPID_J9eV12EUyibpD2BEhNOAhcYgKMofhkGcJq2_o">
+  <meta name="description" content="Capricho, granizado de café artesanal en Aranjuez, Medellín. Pide a domicilio o recoge en tienda.">
+  <meta name="theme-color" content="#75383f">
+  <title>Ingresar · Capricho</title>
+  <link rel="icon" type="image/png" href="static/img/favicon.png">
+  <link rel="apple-touch-icon" href="static/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Fraunces:opsz,wght,SOFT@9..144,600..900,0..100&display=swap">
+  <link rel="stylesheet" href="static/css/capricho.css">
+</head>
+<body data-estatico="1" data-rol="" data-iconos="static/img/iconos.svg">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="barra">
+    <div class="contenedor barra__fila">
+      <a class="marca" href="index.html" aria-label="Capricho, ir al inicio">
+        <img src="static/img/logo-circulo.png" alt="" width="50" height="50">
+        <span class="marca__texto">Granizado de café artesanal</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Principal">
+        <a href="index.html#menu">Menú</a>
+        <a href="index.html#arma">Arma el tuyo</a>
+        <a href="index.html#domicilios">Domicilios</a>
+        <a href="laboratorio.html" >Laboratorio</a>
+        
+      </nav>
+      <div class="barra__acciones">
+        
+          <a class="boton boton--crema boton--sm" href="ingresar.html"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#usuario"></use></svg><span>Ingresar</span></a>
+        
+        <button class="carrito-boton" id="abrir-carrito" type="button" aria-label="Abrir carrito" aria-controls="carrito">
+          <svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#carrito"></use></svg><span class="carrito-boton__cuenta" id="cuenta-carrito" data-cero></span>
+        </button>
+      </div>
+      <button class="menu-movil" id="menu-movil" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menú"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#menu"></use></svg></button>
+    </div>
+  </header>
+<div class="aviso-estatico" role="note"><div class="contenedor">
+  <svg class="icono" aria-hidden="true"><use href="static/img/iconos.svg#info"></use></svg>
+  <span>Demo estática en GitHub Pages con datos de demostración: se puede recorrer todo, pero no enviar
+  transacciones ni pagar. Para probar el detector en vivo ejecuta el proyecto con <code>python run.py</code>.</span>
+</div></div>
+
+  <main id="contenido">
+    
+<div class="pagina-dividida">
+  <div class="pagina-dividida__arte">
+    <img src="static/img/letrero-aranjuez.jpg" width="668" height="899" alt="Letrero de Capricho en Aranjuez">
+  </div>
+  <div class="pagina-dividida__form">
+    <form class="formulario" id="form-ingresar" novalidate data-siguiente="/">
+      <p class="eyebrow">Bienvenido de vuelta</p>
+      <h1>Ingresar</h1>
+      <div class="aviso aviso--error" id="error-general" role="alert" hidden><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#bloqueo"></use></svg><p></p></div>
+
+      <div class="campo" data-campo="email">
+        <label for="campo-email">Correo</label>
+        <input id="campo-email" name="email" type="email" autocomplete="email" data-regla="email" required maxlength="120">
+        <span class="campo__error" role="alert"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span>
+      </div>
+      <div class="campo" data-campo="password">
+        <label for="campo-password">Contraseña</label>
+        <input id="campo-password" name="password" type="password" autocomplete="current-password" data-regla="requerido" required maxlength="64">
+        <span class="campo__error" role="alert"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span>
+      </div>
+
+      <button class="boton boton--bloque" type="submit">Ingresar <svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#flecha"></use></svg></button>
+      <p class="nota-seguridad"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#candado"></use></svg><span>Tu contraseña se verifica contra un hash scrypt con sal. Después de 5 intentos fallidos el acceso se bloquea 5 minutos.</span></p>
+      <p>¿No tienes cuenta? <a href="registro.html">Regístrate</a></p>
+    </form>
+  </div>
+</div>
+
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor">
+      <div class="pie__rejilla">
+        <div class="pie__marca">
+          <img src="static/img/logo-circulo.png" alt="Capricho" width="64" height="64">
+          <div>
+            <strong>Granizado de café artesanal</strong><br>
+            Aranjuez · Cra. 50c # 92-84 · Medellín
+          </div>
+        </div>
+        <div>
+          <a href="index.html#arma">Pedir ahora</a> ·
+          <a href="laboratorio.html">Laboratorio antifraude</a>
+        </div>
+      </div>
+      <small>Proyecto académico de Programación Avanzada · Institución Universitaria Pascual Bravo · Pagos simulados, no se cobra dinero real.</small>
+    </div>
+  </footer>
+
+  <div class="velo" id="velo-carrito" hidden></div>
+  <aside class="carrito" id="carrito" aria-label="Carrito de compras" hidden>
+    <div class="carrito__cabeza">
+      <h2>Tu pedido</h2>
+      <button class="boton-icono" id="cerrar-carrito" type="button" aria-label="Cerrar carrito"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#cerrar"></use></svg></button>
+    </div>
+    <div class="carrito__lineas" id="carrito-lineas"></div>
+    <div class="carrito__pie">
+      <div class="total-grande"><span>Subtotal</span><strong id="carrito-total">$0</strong></div>
+      <a class="boton boton--bloque" href="pagar.html" id="ir-a-pagar">Ir a pagar <svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#flecha"></use></svg></a>
+      <p class="nota-seguridad"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#escudo"></use></svg><span>El precio final lo calcula el servidor. Cambiarlo en el navegador no cambia lo que pagas: la compra se rechaza.</span></p>
+    </div>
+  </aside>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="static/js/comun.js"></script>
+  <script type="module" src="static/js/carrito.js"></script>
+  <script type="module" src="static/js/auth.js"></script>
+</body>
+</html>

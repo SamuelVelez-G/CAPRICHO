@@ -1,0 +1,335 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="E6P1pia4VvCHyGltkgvlWtx2WK6x-LW362RnBryleBs">
+  <meta name="description" content="Capricho, granizado de café artesanal en Aranjuez, Medellín. Pide a domicilio o recoge en tienda.">
+  <meta name="theme-color" content="#75383f">
+  <title>Dashboard antifraude · Capricho</title>
+  <link rel="icon" type="image/png" href="static/img/favicon.png">
+  <link rel="apple-touch-icon" href="static/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Fraunces:opsz,wght,SOFT@9..144,600..900,0..100&display=swap">
+  <link rel="stylesheet" href="static/css/capricho.css">
+</head>
+<body data-estatico="1" data-rol="ADMIN" data-iconos="static/img/iconos.svg">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="barra">
+    <div class="contenedor barra__fila">
+      <a class="marca" href="index.html" aria-label="Capricho, ir al inicio">
+        <img src="static/img/logo-circulo.png" alt="" width="50" height="50">
+        <span class="marca__texto">Granizado de café artesanal</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Principal">
+        <a href="index.html#menu">Menú</a>
+        <a href="index.html#arma">Arma el tuyo</a>
+        <a href="index.html#domicilios">Domicilios</a>
+        <a href="laboratorio.html" >Laboratorio</a>
+        
+          <a href="dashboard.html" aria-current="page">Dashboard</a>
+          <a href="operacion.html" >Operación</a>
+        
+      </nav>
+      <div class="barra__acciones">
+        
+          <span class="saludo">Hola, Administrador</span>
+          
+          <button class="boton boton--crema boton--sm" id="boton-salir" type="button"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#salir"></use></svg><span>Salir</span></button>
+        
+        <button class="carrito-boton" id="abrir-carrito" type="button" aria-label="Abrir carrito" aria-controls="carrito">
+          <svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#carrito"></use></svg><span class="carrito-boton__cuenta" id="cuenta-carrito" data-cero></span>
+        </button>
+      </div>
+      <button class="menu-movil" id="menu-movil" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menú"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#menu"></use></svg></button>
+    </div>
+  </header>
+<div class="aviso-estatico" role="note"><div class="contenedor">
+  <svg class="icono" aria-hidden="true"><use href="static/img/iconos.svg#info"></use></svg>
+  <span>Demo estática en GitHub Pages con datos de demostración: se puede recorrer todo, pero no enviar
+  transacciones ni pagar. Para probar el detector en vivo ejecuta el proyecto con <code>python run.py</code>.</span>
+</div></div>
+
+  <main id="contenido">
+    
+<section class="panel-cabeza">
+  <div class="contenedor panel-cabeza__fila">
+    <div>
+      <p class="eyebrow">Ventana deslizante · HMAC-SHA256 · índice hash</p>
+      <h1>Monitoreo antifraude</h1>
+      <p id="dash-generado">Cargando datos…</p>
+    </div>
+    <div class="filtros" role="group" aria-label="Filtros del dashboard">
+      <div class="segmentado" id="fuente" role="group" aria-label="Qué datos mostrar">
+        <button type="button" data-fuente="vivo" aria-pressed="true" title="Lo que llegó por la API, el laboratorio y la tienda">En vivo</button>
+        <button type="button" data-fuente="demo" aria-pressed="false" title="Solo los datos de demostración sembrados">Demo</button>
+        <button type="button" data-fuente="todo" aria-pressed="false" title="En vivo y demo juntos">Todo</button>
+      </div>
+      <div class="segmentado" id="rango" role="group" aria-label="Rango de fechas">
+        <button type="button" data-rango="hoy" aria-pressed="false">Hoy</button>
+        <button type="button" data-rango="7d" aria-pressed="false">7 días</button>
+        <button type="button" data-rango="30d" aria-pressed="true">30 días</button>
+        <button type="button" data-rango="90d" aria-pressed="false">90 días</button>
+        <button type="button" data-rango="todo" aria-pressed="false">Todo</button>
+      </div>
+      <div class="segmentado" id="por" role="group" aria-label="Contar por">
+        <button type="button" data-por="txn" aria-pressed="true" title="La fecha que trae cada transacción (campo date)">Fecha de la transacción</button>
+        <button type="button" data-por="llegada" aria-pressed="false" title="Cuándo llegó al servidor">Llegada al servidor</button>
+      </div>
+      <label class="en-vivo"><span class="punto-vivo" id="punto-vivo"></span><input type="checkbox" id="en-vivo" checked> En vivo (5 s)</label>
+    </div>
+  </div>
+</section>
+
+<div class="contenedor dash" id="dash">
+  <!-- Hoy | Esta semana | Este mes -->
+  <div class="periodos">
+    <section class="tarjeta periodo" aria-label="Transacciones por periodo">
+      <div class="periodo__titulo"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#grafico"></use></svg> Transacciones</div>
+      <div class="periodo__dato"><span>Hoy</span><strong id="p-txn-hoy">—</strong></div>
+      <div class="periodo__dato"><span>Esta semana</span><strong id="p-txn-semana">—</strong></div>
+      <div class="periodo__dato"><span>Este mes</span><strong id="p-txn-mes">—</strong></div>
+    </section>
+    <section class="tarjeta periodo" aria-label="Anomalías por periodo">
+      <div class="periodo__titulo"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg> Anomalías</div>
+      <div class="periodo__dato"><span>Hoy</span><strong id="p-anom-hoy">—</strong></div>
+      <div class="periodo__dato"><span>Esta semana</span><strong id="p-anom-semana">—</strong></div>
+      <div class="periodo__dato"><span>Este mes</span><strong id="p-anom-mes">—</strong></div>
+    </section>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="rejilla rejilla--12-8">
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Estado de las anomalías</h2><p class="tarjeta__sub">Del rango elegido. Se revisan en la tabla de abajo.</p></div>
+      </div>
+      <div class="estados-anomalias" id="estados-anomalias"></div>
+    </section>
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">Verificación del hash</h2>
+      <p class="tarjeta__sub">Cómo se validó la firma de cada transacción recibida.</p>
+      <ul class="lineas-precio" id="firmas"></ul>
+    </section>
+  </div>
+
+  <section class="tarjeta">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Transacciones buenas y fraudulentas</h2><p class="tarjeta__sub">Resultado del detector en el rango elegido.</p></div>
+    </div>
+    <div class="proporcion" id="proporcion" role="img"></div>
+    <div class="leyenda" id="leyenda-estados"></div>
+    <div class="rejilla rejilla--2 separado">
+      <div>
+        <h3 class="tarjeta__titulo">Últimas aprobadas</h3>
+        <ul class="lista-txn" id="ultimas-buenas"></ul>
+      </div>
+      <div>
+        <h3 class="tarjeta__titulo">Últimas sospechosas y rechazadas</h3>
+        <ul class="lista-txn" id="ultimas-malas"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta" id="ventana-en-vivo">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Ventana deslizante en acción</h2>
+        <p class="tarjeta__sub">Cada punto es una transacción del mismo usuario en la línea del tiempo. El recuadro es la ventana: se desliza de izquierda a derecha y cuenta cuántas caben adentro. Cuando llega al umbral, el detector marca la anomalía.</p></div>
+      <button class="boton boton--xs" id="reproducir-ventana" type="button"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#reloj"></use></svg> Deslizar otra vez</button>
+    </div>
+    <div class="filtros-tabla"><select id="caso-ventana" aria-label="Caso de múltiples transacciones"></select></div>
+    <div class="grafica" id="g-ventana"></div>
+    <p class="tarjeta__sub" id="conteo-ventana"></p>
+    <div class="leyenda">
+      <span class="leyenda__item c-ok"><span class="leyenda__muestra"></span>Aprobada</span>
+      <span class="leyenda__item c-alerta"><span class="leyenda__muestra"></span>Sospechosa</span>
+      <span class="leyenda__item c-critico"><span class="leyenda__muestra"></span>Rechazada</span>
+      <span class="leyenda__item"><span class="leyenda__muestra leyenda__muestra--anillo"></span>La transacción que disparó la anomalía</span>
+    </div>
+  </section>
+
+  <section class="tarjeta tarjeta--grafica" data-grafica="evolucion">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Evolución y tendencia</h2><p class="tarjeta__sub" id="sub-evolucion">Transacciones por día según el resultado del detector. El punto rojo marca un pico repentino de anomalías.</p></div>
+      <button class="boton-tabla" type="button" aria-pressed="false"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tabla"></use></svg> Tabla</button>
+    </div>
+    <div class="leyenda" id="leyenda-evolucion"></div>
+    <div class="grafica" id="g-evolucion"></div>
+  </section>
+
+  <div class="rejilla rejilla--12-8">
+    <section class="tarjeta tarjeta--grafica" data-grafica="calor">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Distribución por hora</h2><p class="tarjeta__sub">Anomalías por día de la semana y hora. Más oscuro = más anomalías.</p></div>
+        <button class="boton-tabla" type="button" aria-pressed="false"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tabla"></use></svg> Tabla</button>
+      </div>
+      <div class="grafica" id="g-calor"></div>
+    </section>
+    <div class="rejilla">
+      <section class="tarjeta">
+        <h2 class="tarjeta__titulo">Horas con más anomalías</h2>
+        <ul class="lineas-precio" id="horas-pico"></ul>
+      </section>
+      <section class="tarjeta">
+        <h2 class="tarjeta__titulo">Transacción sospechosa de mayor valor</h2>
+        <p class="tarjeta__sub">Encontrada con divide y vencerás (diapositiva 24).</p>
+        <div id="mayor-sospechosa"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="rejilla rejilla--3">
+    <section class="tarjeta tarjeta--grafica" data-grafica="niveles">
+      <div class="tarjeta__cabeza"><h2 class="tarjeta__titulo">Anomalías por nivel</h2>
+        <button class="boton-tabla" type="button" aria-pressed="false"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tabla"></use></svg> Tabla</button></div>
+      <div class="grafica" id="g-niveles"></div>
+    </section>
+    <section class="tarjeta tarjeta--grafica" data-grafica="tipos">
+      <div class="tarjeta__cabeza"><h2 class="tarjeta__titulo">Casos más recurrentes</h2>
+        <button class="boton-tabla" type="button" aria-pressed="false"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tabla"></use></svg> Tabla</button></div>
+      <div class="grafica" id="g-tipos"></div>
+    </section>
+    <section class="tarjeta tarjeta--grafica" data-grafica="metodos">
+      <div class="tarjeta__cabeza"><div><h2 class="tarjeta__titulo">Métodos de pago</h2><p class="tarjeta__sub">Transacciones; entre paréntesis, % sospechosas.</p></div>
+        <button class="boton-tabla" type="button" aria-pressed="false"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tabla"></use></svg> Tabla</button></div>
+      <div class="grafica" id="g-metodos"></div>
+    </section>
+  </div>
+
+  <div class="rejilla rejilla--2">
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">Usuarios recurrentes</h2>
+      <p class="tarjeta__sub">Reincidentes: dos o más anomalías en el rango.</p>
+      <div class="tabla-caja"><table class="tabla"><thead><tr><th>Usuario</th><th>Estado</th><th class="num">Txn</th><th class="num">Anom.</th></tr></thead><tbody id="t-recurrentes"></tbody></table></div>
+    </section>
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">Múltiples transacciones</h2>
+      <p class="tarjeta__sub">Últimos casos detectados por la ventana deslizante.</p>
+      <div class="tabla-caja"><table class="tabla"><thead><tr><th>Usuario</th><th>Caso</th><th class="num">En ventana</th><th>Cuándo</th></tr></thead><tbody id="t-multiples"></tbody></table></div>
+    </section>
+  </div>
+
+  <section class="tarjeta" id="anomalias">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Anomalías</h2><p class="tarjeta__sub">Con los mismos filtros de arriba. Abre una para ver su línea de tiempo y la ventana deslizante, y cambiar su estado.</p></div>
+    </div>
+    <div class="filtros-tabla">
+      <select id="f-estado" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option>NUEVA</option><option>ABIERTA</option><option>REVISADA</option><option>DESCARTADA</option></select>
+      <select id="f-nivel" aria-label="Filtrar por nivel"><option value="">Todos los niveles</option><option>BAJO</option><option>MEDIO</option><option>ALTO</option><option>CRITICO</option></select>
+      <select id="f-tipo" aria-label="Filtrar por tipo"><option value="">Todos los tipos</option></select>
+    </div>
+    <div class="tabla-caja"><table class="tabla"><thead><tr><th>#</th><th>Tipo</th><th>Nivel</th><th>Usuario</th><th class="num">Valor</th><th>Fecha</th><th>Origen</th><th>Estado</th><th></th></tr></thead><tbody id="t-anomalias"></tbody></table></div>
+    <div class="paginacion"><span id="info-anomalias"></span><span><button class="boton boton--xs boton--contorno" id="anom-prev" type="button">Anterior</button> <button class="boton boton--xs boton--contorno" id="anom-sig" type="button">Siguiente</button></span></div>
+  </section>
+
+  <div class="rejilla rejilla--2">
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Pila de errores (LIFO)</h2><p class="tarjeta__sub">Lo más reciente arriba: inyecciones, validaciones, replays, límites.</p></div>
+        <a class="boton boton--xs boton--contorno" href="operacion.html#pila">Atender</a>
+      </div>
+      <div class="pila-vis" id="pila-mini"></div>
+    </section>
+    <section class="tarjeta" id="reglas">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Reglas de detección</h2><p class="tarjeta__sub">PUT reemplaza todo · PATCH envía solo lo que cambiaste.</p></div>
+      </div>
+      <form id="form-reglas" novalidate>
+        <div class="opciones opciones--sabores bloque">
+          <label class="opcion"><input type="radio" name="modo" value="FIJA"><span class="opcion__cuerpo"><span><strong>Regla principal</strong><br><small class="muted">Diapositiva 39</small></span></span></label>
+          <label class="opcion"><input type="radio" name="modo" value="FRANJAS"><span class="opcion__cuerpo"><span><strong>Por franja horaria</strong><br><small class="muted">Diapositiva 38</small></span></span></label>
+        </div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="regla_fija.ventana_segundos"><label for="r-fija-v">Ventana fija (s)</label><input id="r-fija-v" name="fija_ventana" type="number" step="0.5" min="0.5"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="regla_fija.umbral"><label for="r-fija-u">Umbral fijo</label><input id="r-fija-u" name="fija_umbral" type="number" min="2"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+        </div>
+        <div class="tabla-caja bloque"><table class="tabla"><thead><tr><th>Franja</th><th>Horario</th><th>Ventana (s)</th><th>Umbral</th></tr></thead><tbody id="r-franjas"></tbody></table></div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="rafaga.maximo"><label for="r-raf-m">Ráfaga: máximo</label><input id="r-raf-m" name="rafaga_maximo" type="number" min="2"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="rafaga.ventana_segundos"><label for="r-raf-v">en (s)</label><input id="r-raf-v" name="rafaga_ventana" type="number" step="0.1" min="0.1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="monto_atipico"><label for="r-monto">Monto atípico ($)</label><input id="r-monto" name="monto" type="number" step="1000" min="10000"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+        </div>
+        <label class="casilla bloque"><input type="checkbox" name="rafaga_llegada"> Ráfaga también por hora de llegada al servidor <span class="muted">(apágala si el generador envía muy rápido)</span></label>
+        <div class="hero__acciones">
+          <button class="boton boton--sm" type="button" id="guardar-patch">PATCH · solo cambios</button>
+          <button class="boton boton--sm boton--contorno" type="button" id="guardar-put">PUT · reemplazar todo</button>
+        </div>
+        <p class="tarjeta__sub" id="reglas-resultado"></p>
+      </form>
+    </section>
+  </div>
+
+  <section class="tarjeta">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Todas las transacciones</h2><p class="tarjeta__sub">Por orden de llegada al servidor, con los mismos filtros de arriba (datos, rango y fecha).</p></div>
+    </div>
+    <div class="filtros-tabla">
+      <select id="t-estado" aria-label="Filtrar por estado"><option value="">Todas</option><option>APROBADA</option><option>SOSPECHOSA</option><option>RECHAZADA</option></select>
+      <input id="t-busqueda" type="search" placeholder="Buscar correo o idTxn" maxlength="60" aria-label="Buscar">
+    </div>
+    <div class="tabla-caja"><table class="tabla"><thead><tr><th>idTxn</th><th>Usuario</th><th class="num">Valor</th><th>Fecha</th><th>Método</th><th>Origen</th><th>Resultado</th></tr></thead><tbody id="t-transacciones"></tbody></table></div>
+    <div class="paginacion"><span id="info-transacciones"></span><span><button class="boton boton--xs boton--contorno" id="txn-prev" type="button">Anterior</button> <button class="boton boton--xs boton--contorno" id="txn-sig" type="button">Siguiente</button></span></div>
+  </section>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Técnicas aplicadas en este panel</h2>
+    <div class="tecnicas">
+      <span class="tecnica"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#reloj"></use></svg> Ventana deslizante por usuario</span>
+      <span class="tecnica"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#llave"></use></svg> HMAC-SHA256 por transacción</span>
+      <span class="tecnica"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#lupa"></use></svg> Índice hash O(1) por idTxn y correo</span>
+      <span class="tecnica"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#grafico"></use></svg> Merge sort para ordenar lotes</span>
+      <span class="tecnica"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#grafico"></use></svg> Divide y vencerás: mayor sospechosa</span>
+      <span class="tecnica"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#pila"></use></svg> Pila LIFO de errores</span>
+      <span class="tecnica"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#cola"></use></svg> Cola FIFO de pedidos</span>
+      <span class="tecnica"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#grafo"></use></svg> Grafo + Dijkstra para domicilios</span>
+      <span class="tecnica"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tabla"></use></svg> Logs con qué, cuándo y dónde</span>
+    </div>
+  </section>
+</div>
+
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor">
+      <div class="pie__rejilla">
+        <div class="pie__marca">
+          <img src="static/img/logo-circulo.png" alt="Capricho" width="64" height="64">
+          <div>
+            <strong>Granizado de café artesanal</strong><br>
+            Aranjuez · Cra. 50c # 92-84 · Medellín
+          </div>
+        </div>
+        <div>
+          <a href="index.html#arma">Pedir ahora</a> ·
+          <a href="laboratorio.html">Laboratorio antifraude</a>
+        </div>
+      </div>
+      <small>Proyecto académico de Programación Avanzada · Institución Universitaria Pascual Bravo · Pagos simulados, no se cobra dinero real.</small>
+    </div>
+  </footer>
+
+  <div class="velo" id="velo-carrito" hidden></div>
+  <aside class="carrito" id="carrito" aria-label="Carrito de compras" hidden>
+    <div class="carrito__cabeza">
+      <h2>Tu pedido</h2>
+      <button class="boton-icono" id="cerrar-carrito" type="button" aria-label="Cerrar carrito"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#cerrar"></use></svg></button>
+    </div>
+    <div class="carrito__lineas" id="carrito-lineas"></div>
+    <div class="carrito__pie">
+      <div class="total-grande"><span>Subtotal</span><strong id="carrito-total">$0</strong></div>
+      <a class="boton boton--bloque" href="pagar.html" id="ir-a-pagar">Ir a pagar <svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#flecha"></use></svg></a>
+      <p class="nota-seguridad"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#escudo"></use></svg><span>El precio final lo calcula el servidor. Cambiarlo en el navegador no cambia lo que pagas: la compra se rechaza.</span></p>
+    </div>
+  </aside>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="static/js/comun.js"></script>
+  <script type="module" src="static/js/carrito.js"></script>
+  <script type="module" src="static/js/dashboard.js"></script>
+</body>
+</html>

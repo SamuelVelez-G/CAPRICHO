@@ -24,6 +24,13 @@ def leer_json(forzar=False):
     return datos
 
 
+def filtro_de_consulta(rango="30d", por="txn", fuente="vivo"):
+    """El mismo filtro para todas las consultas del dashboard (ver estadisticas.Filtro)."""
+    from ..servicios.estadisticas import Filtro
+    return Filtro(rango=request.args.get("rango", rango), por=request.args.get("por", por),
+                  fuente=request.args.get("fuente", fuente))
+
+
 def ip_cliente():
     return request.remote_addr or "desconocida"
 

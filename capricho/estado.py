@@ -39,6 +39,6 @@ class EstadoMemoria:
             )
             self.pila_errores = Pila(
                 dict(fila) for fila in db.execute(
-                    """SELECT id, tipo, nivel, detalle, ruta, metodo, ip, email, fecha
+                    """SELECT id, tipo, nivel, detalle, ruta, metodo, ip, email, fecha, demo
                        FROM eventos WHERE atendido = 0 ORDER BY fecha, id""")
             )

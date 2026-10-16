@@ -209,7 +209,7 @@ def _precio_manipulado(db, estado, txn, instante, rng):
         f"{detector.dinero(real)}. Se alteró el precio en el localStorage.")
     txn["id_txn"] = f"CAP-{instante:%Y%m%d%H%M%S}-{rng.randrange(16 ** 6):06X}"
     usuario_id, _ = estado.indice_usuarios.buscar(txn["email"])
-    detector._guardar(db, estado, usuario_id, txn, "RECHAZADA", [anomalia], "TIENDA", None, instante)
+    detector._guardar(db, estado, usuario_id, txn, "RECHAZADA", [anomalia], "DEMO", None, instante)
 
 
 def _pedido(db, estado, rng, instante, email):
@@ -234,7 +234,7 @@ def _pedido(db, estado, rng, instante, email):
     except ErrorValidacion:
         return None
     txn = detector.transaccion_de_tienda(estado, email, total, datos["metodo_pago"], instante)
-    resultado = detector.procesar_transaccion(db, estado, txn, origen="TIENDA", llegada=instante, confirmar=False)
+    resultado = detector.procesar_transaccion(db, estado, txn, origen="DEMO", llegada=instante, confirmar=False)
     usuario_id, _ = estado.indice_usuarios.buscar(email)
     cursor = db.execute(
         """INSERT INTO pedidos (usuario_id, transaccion_id, estado, tipo_entrega, barrio, direccion, ruta,
@@ -308,7 +308,7 @@ def _eventos(db, rng, hoy, momento_actual):
                      momento_actual - timedelta(minutes=rng.randint(10, 600)))
         detalle = f"{campo}: {texto}" if campo else texto
         db.execute(
-            """INSERT INTO eventos (tipo, nivel, detalle, ruta, metodo, ip, email, atendido, fecha)
-               VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)""",
+            """INSERT INTO eventos (tipo, nivel, detalle, ruta, metodo, ip, email, atendido, fecha, demo)
+               VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 1)""",
             (tipo, nivel, detalle, ruta, metodo, f"181.{rng.randint(50, 60)}.{rng.randint(0, 255)}.{rng.randint(1, 254)}",
              1 if numero < 19 else 0, a_texto(cuando)))

@@ -63,7 +63,7 @@ async function cargarPila() {
   vaciar(document.getElementById("pila-completa"), ...(datos.eventos.length ? datos.eventos.map((e, i) => el("div", { class: "pila-item" },
     nivel(e.nivel),
     el("div", { class: "pila-item__detalle" },
-      el("strong", { text: `${i === 0 ? "CIMA · " : ""}${e.tipo} · ${e.metodo || ""} ${e.ruta || ""}` }),
+      el("strong", { text: `${i === 0 ? "CIMA · " : ""}${e.demo ? "DEMO · " : ""}${e.tipo} · ${e.metodo || ""} ${e.ruta || ""}` }),
       el("p", { text: e.detalle }),
       el("p", { class: "muted", text: `IP ${e.ip || "—"}${e.email ? " · " + e.email : ""}` })),
     el("time", { text: fechaCorta(e.fecha) })))

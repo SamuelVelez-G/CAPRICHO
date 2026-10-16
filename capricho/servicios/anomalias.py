@@ -18,16 +18,17 @@ TRANSICIONES = {
 }
 POR_PAGINA = 12
 
-CONSULTA = """SELECT a.*, t.id_txn, t.valor, t.fecha_txn, t.metodo_pago, t.estado AS estado_txn,
+CONSULTA = """SELECT a.*, t.id_txn, t.valor, t.fecha_txn, t.metodo_pago, t.estado AS estado_txn, t.origen,
                      u.id AS usuario_id, u.email, u.nombre
               FROM anomalias a
               JOIN transacciones t ON t.id = a.transaccion_id
               JOIN usuarios u ON u.id = t.usuario_id"""
 
 
-def listar(db, estado=None, nivel=None, tipo=None, pagina=1):
+def listar(db, filtro, estado=None, nivel=None, tipo=None, pagina=1):
     """Los filtros solo aceptan valores de listas cerradas; el SQL se arma
-    con condiciones fijas y los valores van como parámetros."""
+    con condiciones fijas y los valores van como parámetros. Usa el mismo
+    `Filtro` (fuente, rango y fecha) que el resto del dashboard."""
     errores = {}
     if estado and estado not in ESTADOS:
         errores["estado"] = "Estado desconocido"
@@ -38,21 +39,24 @@ def listar(db, estado=None, nivel=None, tipo=None, pagina=1):
     if errores:
         raise ErrorValidacion(errores)
 
-    condiciones, parametros = [], []
+    where, params = filtro.donde()
+    condiciones, parametros = [where], list(params)
     for columna, valor in (("a.estado", estado), ("a.nivel", nivel), ("a.tipo", tipo)):
         if valor:
             condiciones.append(f"{columna} = ?")
             parametros.append(valor)
-    donde = (" WHERE " + " AND ".join(condiciones)) if condiciones else ""
+    donde = " WHERE " + " AND ".join(condiciones)
 
-    total = db.execute(f"SELECT COUNT(*) FROM anomalias a{donde}", parametros).fetchone()[0]
+    total = db.execute(
+        f"SELECT COUNT(*) FROM anomalias a JOIN transacciones t ON t.id = a.transaccion_id{donde}", parametros
+    ).fetchone()[0]
     pagina = max(1, pagina)
     filas = filas_a_dicts(db.execute(
         CONSULTA + donde + " ORDER BY a.fecha_creacion DESC, a.id DESC LIMIT ? OFFSET ?",
         (*parametros, POR_PAGINA, (pagina - 1) * POR_PAGINA),
     ))
     return {"anomalias": filas, "total": total, "pagina": pagina,
-            "paginas": max(1, -(-total // POR_PAGINA))}
+            "paginas": max(1, -(-total // POR_PAGINA)), **filtro.describir()}
 
 
 def detalle(db, anomalia_id):

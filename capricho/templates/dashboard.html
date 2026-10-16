@@ -10,6 +10,11 @@
       <p id="dash-generado">Cargando datos…</p>
     </div>
     <div class="filtros" role="group" aria-label="Filtros del dashboard">
+      <div class="segmentado" id="fuente" role="group" aria-label="Qué datos mostrar">
+        <button type="button" data-fuente="vivo" aria-pressed="true" title="Lo que llegó por la API, el laboratorio y la tienda">En vivo</button>
+        <button type="button" data-fuente="demo" aria-pressed="false" title="Solo los datos de demostración sembrados">Demo</button>
+        <button type="button" data-fuente="todo" aria-pressed="false" title="En vivo y demo juntos">Todo</button>
+      </div>
       <div class="segmentado" id="rango" role="group" aria-label="Rango de fechas">
         <button type="button" data-rango="hoy" aria-pressed="false">Hoy</button>
         <button type="button" data-rango="7d" aria-pressed="false">7 días</button>
@@ -157,14 +162,14 @@
 
   <section class="tarjeta" id="anomalias">
     <div class="tarjeta__cabeza">
-      <div><h2 class="tarjeta__titulo">Anomalías</h2><p class="tarjeta__sub">Abre una para ver su línea de tiempo y la ventana deslizante, y cambiar su estado.</p></div>
+      <div><h2 class="tarjeta__titulo">Anomalías</h2><p class="tarjeta__sub">Con los mismos filtros de arriba. Abre una para ver su línea de tiempo y la ventana deslizante, y cambiar su estado.</p></div>
     </div>
     <div class="filtros-tabla">
       <select id="f-estado" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option>NUEVA</option><option>ABIERTA</option><option>REVISADA</option><option>DESCARTADA</option></select>
       <select id="f-nivel" aria-label="Filtrar por nivel"><option value="">Todos los niveles</option><option>BAJO</option><option>MEDIO</option><option>ALTO</option><option>CRITICO</option></select>
       <select id="f-tipo" aria-label="Filtrar por tipo"><option value="">Todos los tipos</option></select>
     </div>
-    <div class="tabla-caja"><table class="tabla"><thead><tr><th>#</th><th>Tipo</th><th>Nivel</th><th>Usuario</th><th class="num">Valor</th><th>Fecha</th><th>Estado</th><th></th></tr></thead><tbody id="t-anomalias"></tbody></table></div>
+    <div class="tabla-caja"><table class="tabla"><thead><tr><th>#</th><th>Tipo</th><th>Nivel</th><th>Usuario</th><th class="num">Valor</th><th>Fecha</th><th>Origen</th><th>Estado</th><th></th></tr></thead><tbody id="t-anomalias"></tbody></table></div>
     <div class="paginacion"><span id="info-anomalias"></span><span><button class="boton boton--xs boton--contorno" id="anom-prev" type="button">Anterior</button> <button class="boton boton--xs boton--contorno" id="anom-sig" type="button">Siguiente</button></span></div>
   </section>
 
@@ -207,7 +212,7 @@
 
   <section class="tarjeta">
     <div class="tarjeta__cabeza">
-      <div><h2 class="tarjeta__titulo">Todas las transacciones</h2><p class="tarjeta__sub">Por orden de llegada al servidor.</p></div>
+      <div><h2 class="tarjeta__titulo">Todas las transacciones</h2><p class="tarjeta__sub">Por orden de llegada al servidor, con los mismos filtros de arriba (datos, rango y fecha).</p></div>
     </div>
     <div class="filtros-tabla">
       <select id="t-estado" aria-label="Filtrar por estado"><option value="">Todas</option><option>APROBADA</option><option>SOSPECHOSA</option><option>RECHAZADA</option></select>

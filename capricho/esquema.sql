@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS eventos (
     ip          TEXT,
     email       TEXT,
     atendido    INTEGER NOT NULL DEFAULT 0 CHECK (atendido IN (0, 1)),
+    demo        INTEGER NOT NULL DEFAULT 0 CHECK (demo IN (0, 1)),   -- 1 = sembrado por la demo
     fecha       TEXT    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_evento_fecha ON eventos (fecha);
