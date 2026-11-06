@@ -12,6 +12,7 @@ reúne lo mejor de los dos trabajos anteriores:
 | Trabajo 1 (complejidad) | **Búsqueda por índice hash O(1)**: usuarios por correo y transacciones por `idTxn` |
 | Trabajo 2 (estructuras) | **Cola FIFO** para los pedidos, **Pila LIFO** para los errores y **grafo + Dijkstra** para los domicilios |
 | Técnicas de resolución | Métodos HTTP, hash HMAC-SHA256, validación, divide y vencerás, búsqueda eficiente, logs y **ventana deslizante** |
+| Keras (redes neuronales) | **Autoencoder** que aprende los hábitos de compra y detecta fraudes que ninguna regla ve |
 
 ---
 
@@ -29,7 +30,9 @@ base de datos) hay que ejecutar el proyecto como se explica abajo.
 |---|---|
 | [![Tienda de Capricho](docs/capturas/tienda.png)](https://samuelvelez-g.github.io/CAPRICHO/) | [![Dashboard antifraude](docs/capturas/dashboard.png)](https://samuelvelez-g.github.io/CAPRICHO/dashboard.html) |
 
-[![Laboratorio antifraude](docs/capturas/laboratorio.png)](https://samuelvelez-g.github.io/CAPRICHO/laboratorio.html)
+| Laboratorio | Detector con IA (Keras) |
+|---|---|
+| [![Laboratorio antifraude](docs/capturas/laboratorio.png)](https://samuelvelez-g.github.io/CAPRICHO/laboratorio.html) | [![Detector con IA](docs/capturas/ia.png)](https://samuelvelez-g.github.io/CAPRICHO/ia.html) |
 
 ---
 
@@ -84,7 +87,7 @@ y cuentas), así el dashboard muestra únicamente lo que él envíe:
 python run.py --reiniciar --limpio
 ```
 
-Pruebas automáticas (55 pruebas: casos de uso, franjas, formatos del generador, separación de datos en vivo y demo, seguridad, formularios y métodos HTTP):
+Pruebas automáticas (64 pruebas: casos de uso, franjas, formatos del generador, separación de datos en vivo y demo, IA, seguridad, formularios y métodos HTTP):
 
 ```bash
 python -m unittest discover -s tests -t .
@@ -111,6 +114,58 @@ dominio fijo gratuito del panel). Las dos terminales y el computador deben
 quedar encendidos durante la prueba.
 
 Alternativa sin cuenta: `cloudflared tunnel --url http://localhost:5000`.
+
+---
+
+## Detector de fraude con IA (Keras)
+
+**El problema.** Las reglas solo detectan lo que alguien programó: 3 compras en
+la ventana, 5 en un segundo, montos de $300.000 o más. Un fraude que no encaje
+en ninguna pasa como normal, por ejemplo $250.000 a las 3 a. m. con un método
+que el cliente nunca usa.
+
+**La solución.** Un *autoencoder* de Keras aprende cómo compran normalmente los
+clientes de Capricho y marca lo que no se parece, sin necesidad de ejemplos de
+fraude etiquetados.
+
+```
+compra -> 9 variables de comportamiento -> 9 -> 24 -> 12 -> [4] -> 12 -> 24 -> 9 -> error de reconstrucción -> riesgo 0-100
+```
+
+| Paso | Dónde |
+|---|---|
+| Variables: hora (seno y coseno), monto, monto vs. su habitual, método vs. el habitual, hora vs. su horario, compras en la última hora, tiempo desde la anterior, historial | `capricho/ia/caracteristicas.py` |
+| Modelo: capas `Dense`, pérdida MSE, optimizador Adam, parada temprana | `capricho/ia/modelo.py` |
+| Entrenamiento, umbral (percentil 99) y evaluación contra las reglas | `herramientas/entrenar_ia.py` |
+| Uso en vivo: cada transacción del endpoint recibe `riesgo_ia` y, si supera el umbral, la anomalía `COMPORTAMIENTO_INUSUAL` | `capricho/servicios/detector.py` |
+| Página con el entrenamiento, la evaluación y un probador | `/ia` |
+
+Resultados con compras y ataques que el modelo no vio al entrenar:
+
+| Ataque | IA | Reglas |
+|---|---|---|
+| Fraude silencioso de madrugada | 100 % | 0 % |
+| Cuenta tomada | 97 % | 0 % |
+| Prueba de tarjeta | 100 % | 0 % |
+| Cliente nuevo con monto alto | 100 % | 0 % |
+| Monto atípico (sí lo ve la regla) | 100 % | 100 % |
+| **Falsas alarmas en compras normales** | **2,0 %** | — |
+
+Para volver a entrenar (unos 2 minutos; el modelo entrenado ya viene en `capricho/ia/artefactos/`):
+
+```bash
+python herramientas/entrenar_ia.py
+```
+
+En el dashboard, "Reglas de detección", se elige qué hace la IA: **marcar** la
+compra como sospechosa, **solo observar** (guarda el riesgo sin cambiar el
+resultado de las reglas, útil si el generador del profesor manda datos que no
+son de una cafetería) o **apagada**. Limitaciones: datos de demostración, falsas
+alarmas cercanas al 2 %, clientes sin historial y hábitos que cambian; el
+detalle está en la página `/ia`.
+
+> Keras 3 funciona sobre varios motores. TensorFlow todavía no tiene versión
+> para Python 3.14, así que usamos **PyTorch** (`KERAS_BACKEND=torch`).
 
 ---
 
@@ -157,6 +212,7 @@ guarda cada página como HTML y cada consulta GET como JSON. En GitHub:
 | `/` | Tienda: menú, arma tu granizado, mapa de domicilios |
 | `/pagar` | Pago del carrito (necesita sesión) |
 | `/laboratorio` | **Para el profesor**: formulario y escenarios para mandar pagos buenos y fraudulentos |
+| `/ia` | Detector con IA: cómo se entrenó, qué tan bien detecta y probador en vivo |
 | `/dashboard` | Monitoreo antifraude (administrador) |
 | `/operacion` | Cola de pedidos, pila de errores, grafo, búsqueda por índice y CRUD de productos (administrador) |
 
@@ -311,9 +367,10 @@ capricho/
   registro.py          logs (qué, cuándo, dónde) y pila de errores
   semilla.py           datos de demostración que pasan por el detector real
   servicios/           detector, pedidos, catálogo, domicilios, estadísticas, anomalías
+  ia/                  autoencoder de Keras: variables, modelo y modelo entrenado (artefactos/)
   rutas/               endpoints de la API y páginas
   templates/ static/   interfaz (HTML, CSS y JavaScript sin librerías externas)
-herramientas/          enviar transacciones desde la terminal y exportar la demo estática
+herramientas/          enviar transacciones, entrenar la IA y exportar la demo estática
 docs/                  demo estática para GitHub Pages (generada) y capturas
 tests/                 pruebas automáticas
 run.py                 arranque

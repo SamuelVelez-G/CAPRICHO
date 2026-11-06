@@ -51,6 +51,11 @@ def laboratorio():
     return render_template("laboratorio.html")
 
 
+@bp.get("/ia")
+def ia():
+    return render_template("ia.html")
+
+
 @bp.get("/dashboard")
 @admin_requerido
 def dashboard():

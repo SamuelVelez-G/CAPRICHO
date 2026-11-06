@@ -274,3 +274,91 @@ export function tabla(columnas, filas) {
     el("tbody", {}, ...filas.map((fila) => el("tr", {}, ...columnas.map((c) =>
       el("td", { class: c.num ? "num" : "", text: c.valor(fila) })))))));
 }
+
+/**
+ * Líneas sobre un mismo eje (por ejemplo, la pérdida por época al entrenar).
+ * series: [{nombre, color, valores: [números]}]
+ */
+export function lineas(contenedor, series, { alto = 240, etiquetaX = (i) => String(i + 1), formato = (v) => numero(v, 2) } = {}) {
+  const ancho = Math.max(320, contenedor.clientWidth);
+  const m = { arriba: 16, derecha: 12, abajo: 28, izquierda: 48 };
+  const n = Math.max(...series.map((s) => s.valores.length));
+  const maximo = Math.max(...series.flatMap((s) => s.valores), 1e-9);
+  const paso = pasoLimpio(maximo);
+  const tope = Math.ceil(maximo / paso) * paso;
+  const x = (i) => m.izquierda + (i / Math.max(1, n - 1)) * (ancho - m.izquierda - m.derecha);
+  const y = (v) => m.arriba + (alto - m.arriba - m.abajo) * (1 - v / tope);
+  const capas = [];
+  for (let v = 0; v <= tope + 1e-9; v += paso) {
+    capas.push(svg("line", { class: v === 0 ? "eje" : "rejilla-linea", x1: m.izquierda, x2: ancho - m.derecha, y1: y(v), y2: y(v) }));
+    capas.push(svg("text", { class: "tick", x: m.izquierda - 8, y: y(v) + 4, "text-anchor": "end", text: formato(v) }));
+  }
+  const cada = Math.ceil(n / 8);
+  for (let i = 0; i < n; i += cada) capas.push(svg("text", { class: "tick", x: x(i), y: alto - 8, "text-anchor": "middle", text: etiquetaX(i) }));
+  for (const serie of series) {
+    const d = serie.valores.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    capas.push(svg("path", { d, fill: "none", stroke: serie.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    const ultimo = serie.valores.length - 1;
+    capas.push(svg("circle", { cx: x(ultimo), cy: y(serie.valores[ultimo]), r: 4, fill: serie.color, stroke: "var(--papel)", "stroke-width": 2 }));
+  }
+  // Retícula vertical que sigue al puntero y muestra todas las series.
+  const tip = crearTooltip(contenedor);
+  const guia = svg("line", { class: "guia", y1: m.arriba, y2: alto - m.abajo, visibility: "hidden" });
+  const zona = svg("rect", { x: m.izquierda, y: m.arriba, width: ancho - m.izquierda - m.derecha, height: alto - m.arriba - m.abajo, fill: "transparent" });
+  zona.addEventListener("pointermove", (evento) => {
+    const caja = zona.getBoundingClientRect();
+    const i = Math.max(0, Math.min(n - 1, Math.round(((evento.clientX - caja.left) / caja.width) * (n - 1))));
+    guia.setAttribute("x1", x(i)); guia.setAttribute("x2", x(i)); guia.setAttribute("visibility", "visible");
+    tip.mostrar(x(i), m.arriba + 10, `Época ${etiquetaX(i)}`, series.map((s) => [s.color, s.nombre, formato(s.valores[i] ?? 0)]));
+  });
+  zona.addEventListener("pointerleave", () => { guia.setAttribute("visibility", "hidden"); tip.ocultar(); });
+  capas.push(guia, zona);
+  const tipActual = contenedor.querySelector(".tooltip");
+  vaciar(contenedor, svg("svg", { viewBox: `0 0 ${ancho} ${alto}`, width: ancho, height: alto, role: "img" }, ...capas), tipActual);
+}
+
+/** Dos histogramas sobre los mismos rangos (bordes) y una línea vertical para el umbral. */
+export function histogramaDoble(contenedor, bordes, grupos, umbral, { alto = 240 } = {}) {
+  const ancho = Math.max(320, contenedor.clientWidth);
+  const m = { arriba: 22, derecha: 10, abajo: 30, izquierda: 40 };
+  const bandas = bordes.length - 1;
+  const maximo = Math.max(1, ...grupos.flatMap((g) => g.valores));
+  const paso = pasoLimpio(maximo);
+  const tope = Math.ceil(maximo / paso) * paso;
+  const anchoBanda = (ancho - m.izquierda - m.derecha) / bandas;
+  const y = (v) => m.arriba + (alto - m.arriba - m.abajo) * (1 - v / tope);
+  const xLog = (valor) => {
+    const a = Math.log10(bordes[0]);
+    const b = Math.log10(bordes[bandas]);
+    return m.izquierda + ((Math.log10(valor) - a) / (b - a)) * (ancho - m.izquierda - m.derecha);
+  };
+  const capas = [];
+  for (let v = 0; v <= tope; v += paso) {
+    capas.push(svg("line", { class: v === 0 ? "eje" : "rejilla-linea", x1: m.izquierda, x2: ancho - m.derecha, y1: y(v), y2: y(v) }));
+    capas.push(svg("text", { class: "tick", x: m.izquierda - 8, y: y(v) + 4, "text-anchor": "end", text: numero(v) }));
+  }
+  const tip = crearTooltip(contenedor);
+  const grosor = Math.max(2, Math.min(12, (anchoBanda - 4) / grupos.length));
+  for (let i = 0; i < bandas; i++) {
+    grupos.forEach((g, j) => {
+      const v = g.valores[i];
+      if (!v) return;
+      const x0 = m.izquierda + anchoBanda * i + (anchoBanda - grosor * grupos.length - 2 * (grupos.length - 1)) / 2 + j * (grosor + 2);
+      const barra = svg("path", { class: "marca-hover", d: rutaBarra(x0, y(v), grosor, alto - m.abajo - y(v)), fill: g.color, tabindex: "0",
+        "aria-label": `${g.nombre}: ${v} con error entre ${numero(bordes[i], 3)} y ${numero(bordes[i + 1], 3)}` });
+      const mostrar = () => tip.mostrar(x0, y(v), `Error ${numero(bordes[i], 3)} – ${numero(bordes[i + 1], 3)}`, [[g.color, g.nombre, numero(v)]]);
+      barra.addEventListener("pointerenter", mostrar);
+      barra.addEventListener("focus", mostrar);
+      barra.addEventListener("pointerleave", () => tip.ocultar());
+      capas.push(barra);
+    });
+  }
+  for (const marca of [bordes[0], umbral, bordes[bandas]]) {
+    capas.push(svg("text", { class: "tick", x: xLog(marca), y: alto - 10, "text-anchor": "middle", text: numero(marca, 2) }));
+  }
+  const xu = xLog(umbral);
+  capas.push(svg("line", { x1: xu, x2: xu, y1: m.arriba - 6, y2: alto - m.abajo, stroke: "var(--tinta)", "stroke-width": 1.5 }));
+  capas.push(svg("text", { class: "valor", x: xu + 6, y: m.arriba + 4, text: "Umbral" }));
+  const tipActual = contenedor.querySelector(".tooltip");
+  vaciar(contenedor, svg("svg", { viewBox: `0 0 ${ancho} ${alto}`, width: ancho, height: alto, role: "img" }, ...capas), tipActual);
+}

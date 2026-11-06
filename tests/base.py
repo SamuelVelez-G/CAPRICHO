@@ -13,6 +13,8 @@ LLAVE = b"llave_de_pruebas"
 
 
 class PruebaCapricho(unittest.TestCase):
+    CONFIG_EXTRA = {}           # una clase de prueba puede cambiar la configuración
+
     def setUp(self):
         self.carpeta = Path(tempfile.mkdtemp(prefix="capricho_"))
         self.app = create_app({
@@ -22,6 +24,8 @@ class PruebaCapricho(unittest.TestCase):
             "SEMBRAR": "base",
             "TESTING": True,
             "LIMITE_PETICIONES_POR_SEGUNDO": 1000,
+            "IA_ACTIVA": False,
+            **self.CONFIG_EXTRA,
         })
         self.app.extensions["capricho"].limitador_ip.maximo = 1000
         self.cliente = self.app.test_client()

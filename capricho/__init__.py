@@ -43,6 +43,8 @@ def create_app(config=None):
     db.init_app(app)
 
     estado = EstadoMemoria(app.config["LLAVE_HMAC"], app.config["LIMITE_PETICIONES_POR_SEGUNDO"])
+    if app.config["IA_ACTIVA"]:
+        estado.ia = _cargar_ia()
     _preparar_base_de_datos(app, estado)
     app.extensions["capricho"] = estado
 
@@ -50,6 +52,18 @@ def create_app(config=None):
     _registrar_errores(app, estado)
     _registrar_rutas(app)
     return app
+
+
+def _cargar_ia():
+    try:
+        from .ia.modelo import cargar
+        detector_ia = cargar()
+    except Exception as error:            # sin Keras o modelo dañado: se sigue solo con reglas
+        logger.warning("IA desactivada: %s", error)
+        return None
+    if detector_ia is None:
+        logger.warning("IA desactivada: no hay modelo entrenado (python herramientas/entrenar_ia.py)")
+    return detector_ia
 
 
 def _preparar_base_de_datos(app, estado):
@@ -77,11 +91,11 @@ def _preparar_base_de_datos(app, estado):
 
 
 def _registrar_rutas(app):
-    from .rutas import (api_admin, api_auth, api_domicilios, api_laboratorio, api_pedidos,
+    from .rutas import (api_admin, api_auth, api_domicilios, api_ia, api_laboratorio, api_pedidos,
                         api_productos, api_transacciones, paginas)
 
     for modulo in (paginas, api_auth, api_productos, api_domicilios, api_transacciones,
-                   api_pedidos, api_admin, api_laboratorio):
+                   api_pedidos, api_admin, api_laboratorio, api_ia):
         app.register_blueprint(modulo.bp)
 
     # Nombres alternativos del endpoint, por si el generador del profesor usa otro.

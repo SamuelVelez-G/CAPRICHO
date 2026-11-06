@@ -1,0 +1,212 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="B3YikFLmLq7I60ezKADidzyDYekWN46z1MPxU3CWAO0">
+  <meta name="description" content="Capricho, granizado de café artesanal en Aranjuez, Medellín. Pide a domicilio o recoge en tienda.">
+  <meta name="theme-color" content="#75383f">
+  <title>Detector con IA · Capricho</title>
+  <link rel="icon" type="image/png" href="static/img/favicon.png">
+  <link rel="apple-touch-icon" href="static/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Fraunces:opsz,wght,SOFT@9..144,600..900,0..100&display=swap">
+  <link rel="stylesheet" href="static/css/capricho.css">
+</head>
+<body data-estatico="1" data-rol="ADMIN" data-iconos="static/img/iconos.svg">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="barra">
+    <div class="contenedor barra__fila">
+      <a class="marca" href="index.html" aria-label="Capricho, ir al inicio">
+        <img src="static/img/logo-circulo.png" alt="" width="50" height="50">
+        <span class="marca__texto">Granizado de café artesanal</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Principal">
+        <a href="index.html#menu">Menú</a>
+        <a href="index.html#arma">Arma el tuyo</a>
+        <a href="index.html#domicilios">Domicilios</a>
+        <a href="laboratorio.html" >Laboratorio</a>
+        <a href="ia.html" aria-current="page">IA</a>
+        
+          <a href="dashboard.html" >Dashboard</a>
+          <a href="operacion.html" >Operación</a>
+        
+      </nav>
+      <div class="barra__acciones">
+        
+          <span class="saludo">Hola, Administrador</span>
+          
+          <button class="boton boton--crema boton--sm" id="boton-salir" type="button"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#salir"></use></svg><span>Salir</span></button>
+        
+        <button class="carrito-boton" id="abrir-carrito" type="button" aria-label="Abrir carrito" aria-controls="carrito">
+          <svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#carrito"></use></svg><span class="carrito-boton__cuenta" id="cuenta-carrito" data-cero></span>
+        </button>
+      </div>
+      <button class="menu-movil" id="menu-movil" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menú"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#menu"></use></svg></button>
+    </div>
+  </header>
+<div class="aviso-estatico" role="note"><div class="contenedor">
+  <svg class="icono" aria-hidden="true"><use href="static/img/iconos.svg#info"></use></svg>
+  <span>Demo estática en GitHub Pages con datos de demostración: se puede recorrer todo, pero no enviar
+  transacciones ni pagar. Para probar el detector en vivo ejecuta el proyecto con <code>python run.py</code>.</span>
+</div></div>
+
+  <main id="contenido">
+    
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Keras · autoencoder · aprendizaje sin etiquetas</p>
+    <h1>Detector de fraude con IA</h1>
+    <p>Las reglas solo atrapan lo que programamos. Esta red neuronal aprende cómo compran normalmente los clientes de Capricho y avisa cuando una compra no se parece a eso, aunque no rompa ninguna regla.</p>
+  </div>
+</section>
+
+<div class="contenedor dash" id="ia">
+  <div class="aviso aviso--alerta" id="ia-no-disponible" hidden><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><p></p></div>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Cómo funciona</h2>
+    <ol class="pasos-ia">
+      <li><strong>1. Llega una compra</strong><span>Al mismo endpoint de siempre: <code class="mono">POST /api/transacciones</code>.</span></li>
+      <li><strong>2. Se convierte en 9 números</strong><span>Hora, monto y, sobre todo, qué tan distinta es de los hábitos de ese cliente.</span></li>
+      <li><strong>3. La red intenta reconstruirla</strong><span>Comprime los 9 números a 4 y los vuelve a armar. Solo sabe reconstruir compras parecidas a las que vio al entrenar.</span></li>
+      <li><strong>4. El error es el riesgo</strong><span>Si la reconstrucción falla mucho, la compra es rara: riesgo de 0 a 100. Desde 50 se marca anomalía.</span></li>
+    </ol>
+    <p class="tarjeta__sub separado">La red: cada columna es una capa y cada punto una neurona. El "cuello de botella" del centro obliga a la red a aprender lo esencial de una compra normal.</p>
+    <div class="grafica" id="g-arquitectura"></div>
+  </section>
+
+  <div class="kpis" id="ia-kpis"></div>
+
+  <div class="rejilla rejilla--12-8">
+    <section class="tarjeta tarjeta--grafica">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Curva de aprendizaje</h2><p class="tarjeta__sub">Error de reconstrucción en cada época. Si validación sube mientras entrenamiento baja, la red estaría memorizando; por eso se detiene sola cuando validación deja de mejorar.</p></div>
+      </div>
+      <div class="leyenda">
+        <span class="leyenda__item c-serie-1"><span class="leyenda__linea"></span>Entrenamiento</span>
+        <span class="leyenda__item c-serie-2"><span class="leyenda__linea"></span>Validación</span>
+      </div>
+      <div class="grafica" id="g-perdida"></div>
+    </section>
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">Lo que ve la red de cada compra</h2>
+      <ul class="lineas-precio" id="variables">
+        <li><span>Hora (seno y coseno)</span><span class="muted">23:59 queda junto a 00:00</span></li>
+        <li><span>Monto</span><span class="muted">en escala logarítmica</span></li>
+        <li><span>Monto vs. su habitual</span><span class="muted">mediana de sus últimas 30</span></li>
+        <li><span>Método de pago</span><span class="muted">% de veces que lo usa</span></li>
+        <li><span>Hora vs. su horario</span><span class="muted">distancia en el reloj</span></li>
+        <li><span>Compras en la última hora</span><span class="muted">ventana deslizante</span></li>
+        <li><span>Tiempo desde la anterior</span><span class="muted">en horas</span></li>
+        <li><span>Historial</span><span class="muted">cuántas compras tiene</span></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="rejilla rejilla--12-8">
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">¿Encuentra lo que las reglas no ven?</h2>
+      <p class="tarjeta__sub">Ataques construidos a partir del historial real de clientes; ninguno, salvo el último, rompe una regla. La IA no vio ninguno al entrenar.</p>
+      <div class="tabla-caja"><table class="tabla"><thead><tr><th>Ataque</th><th class="num">Casos</th><th>IA</th><th>Reglas</th></tr></thead><tbody id="t-evaluacion"></tbody></table></div>
+      <p class="tarjeta__sub separado" id="falsos-positivos"></p>
+    </section>
+    <section class="tarjeta tarjeta--grafica">
+      <h2 class="tarjeta__titulo">Error de reconstrucción</h2>
+      <p class="tarjeta__sub">Compras normales que el modelo no vio contra ataques. El umbral es el error que solo supera el 1 % de las normales.</p>
+      <div class="leyenda">
+        <span class="leyenda__item c-serie-3"><span class="leyenda__muestra"></span>Normales</span>
+        <span class="leyenda__item c-serie-1"><span class="leyenda__muestra"></span>Ataques</span>
+      </div>
+      <div class="grafica" id="g-histograma"></div>
+    </section>
+  </div>
+
+  <section class="tarjeta" id="probador">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Probador en vivo</h2><p class="tarjeta__sub">Describe una compra y los hábitos del cliente; la red responde al instante. No guarda nada.</p></div>
+    </div>
+    <div class="hero__acciones bloque" id="presets"></div>
+    <div class="probador">
+      <form id="form-probador" class="probador__form" novalidate>
+        <div class="fila-campos">
+          <div class="campo" data-campo="hora"><label for="p-hora">Hora de la compra · <strong id="v-hora"></strong></label><input id="p-hora" name="hora" type="range" min="0" max="23.75" step="0.25"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="valor"><label for="p-valor">Monto ($)</label><input id="p-valor" name="valor" type="number" min="100" step="500"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="metodo"><label for="p-metodo">Método de pago</label><select id="p-metodo" name="metodo"><option>Nequi</option><option>Tarjeta</option><option>Daviplata</option><option>PSE</option><option>Efectivo</option></select><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="proporcion_metodo"><label for="p-prop">Usa ese método en · <strong id="v-prop"></strong></label><input id="p-prop" name="proporcion_metodo" type="range" min="0" max="1" step="0.05"><span class="ayuda">de sus compras</span><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+        </div>
+        <p class="etiqueta">Hábitos del cliente</p>
+        <div class="fila-campos">
+          <div class="campo" data-campo="monto_habitual"><label for="p-habitual">Su compra habitual ($)</label><input id="p-habitual" name="monto_habitual" type="number" min="100" step="500"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="hora_habitual"><label for="p-hora-habitual">Suele comprar a las · <strong id="v-hora-habitual"></strong></label><input id="p-hora-habitual" name="hora_habitual" type="range" min="0" max="23.75" step="0.25"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="compras_ultima_hora"><label for="p-ultima">Compras en la última hora</label><input id="p-ultima" name="compras_ultima_hora" type="number" min="0" max="100" step="1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="horas_desde_anterior"><label for="p-desde">Horas desde su compra anterior</label><input id="p-desde" name="horas_desde_anterior" type="number" min="0" step="0.05"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="compras_previas"><label for="p-previas">Compras anteriores</label><input id="p-previas" name="compras_previas" type="number" min="0" step="1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+        </div>
+      </form>
+      <div class="probador__resultado" id="resultado-probador" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Limitaciones (uso responsable)</h2>
+    <ul class="limitaciones">
+      <li><strong>Datos de demostración.</strong> Se entrenó con 9 semanas de compras simuladas con hábitos realistas, no con clientes reales. Con datos reales hay que volver a entrenar y medir.</li>
+      <li><strong>Aprende lo que le muestres.</strong> En la primera versión el histórico traía fraudes que ninguna regla había detectado, y la red los aprendió como normales: detectaba 2 de 60. Por eso se entrena con un histórico revisado.</li>
+      <li><strong>Falsas alarmas.</strong> Por diseño, cerca del 1 al 2 % de las compras normales superan el umbral. No bloquea: marca para revisión humana.</li>
+      <li><strong>Clientes nuevos.</strong> Sin al menos 3 compras no hay hábito con qué comparar y la red decide solo con hora, monto y ritmo.</li>
+      <li><strong>Los hábitos cambian.</strong> Si un cliente cambia de horario o de método, al principio se verá raro. Hay que reentrenar periódicamente.</li>
+      <li><strong>Complementa, no reemplaza.</strong> Las reglas siguen bloqueando ráfagas y firmas falsas; la IA agrega lo que no se puede escribir como regla.</li>
+    </ul>
+  </section>
+</div>
+
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor">
+      <div class="pie__rejilla">
+        <div class="pie__marca">
+          <img src="static/img/logo-circulo.png" alt="Capricho" width="64" height="64">
+          <div>
+            <strong>Granizado de café artesanal</strong><br>
+            Aranjuez · Cra. 50c # 92-84 · Medellín
+          </div>
+        </div>
+        <div>
+          <a href="index.html#arma">Pedir ahora</a> ·
+          <a href="laboratorio.html">Laboratorio antifraude</a>
+        </div>
+      </div>
+      <small>Proyecto académico de Programación Avanzada · Institución Universitaria Pascual Bravo · Pagos simulados, no se cobra dinero real.</small>
+    </div>
+  </footer>
+
+  <div class="velo" id="velo-carrito" hidden></div>
+  <aside class="carrito" id="carrito" aria-label="Carrito de compras" hidden>
+    <div class="carrito__cabeza">
+      <h2>Tu pedido</h2>
+      <button class="boton-icono" id="cerrar-carrito" type="button" aria-label="Cerrar carrito"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#cerrar"></use></svg></button>
+    </div>
+    <div class="carrito__lineas" id="carrito-lineas"></div>
+    <div class="carrito__pie">
+      <div class="total-grande"><span>Subtotal</span><strong id="carrito-total">$0</strong></div>
+      <a class="boton boton--bloque" href="pagar.html" id="ir-a-pagar">Ir a pagar <svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#flecha"></use></svg></a>
+      <p class="nota-seguridad"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#escudo"></use></svg><span>El precio final lo calcula el servidor. Cambiarlo en el navegador no cambia lo que pagas: la compra se rechaza.</span></p>
+    </div>
+  </aside>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="static/js/comun.js"></script>
+  <script type="module" src="static/js/carrito.js"></script>
+  <script type="module" src="static/js/ia.js"></script>
+</body>
+</html>

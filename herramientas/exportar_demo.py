@@ -32,7 +32,7 @@ from capricho.servicios import anomalias, detector, domicilios, estadisticas  # 
 
 DESTINO = RAIZ / "docs"
 CONSERVAR = {"capturas"}            # carpetas de docs/ que no se borran al exportar
-PAGINAS = {"/": "index.html", "/laboratorio": "laboratorio.html", "/dashboard": "dashboard.html",
+PAGINAS = {"/": "index.html", "/laboratorio": "laboratorio.html", "/ia": "ia.html", "/dashboard": "dashboard.html",
            "/operacion": "operacion.html", "/pagar": "pagar.html", "/ingresar": "ingresar.html",
            "/registro": "registro.html", "/mis-pedidos": "index.html"}
 MAX_PAGINAS_TRANSACCIONES = 8
@@ -123,12 +123,12 @@ def main():
                                                       "password": app.config["ADMIN_PASSWORD"]},
                              headers={"X-CSRF-Token": csrf})
     assert respuesta.status_code == 200, respuesta.get_json()
-    for ruta in ("/", "/laboratorio", "/dashboard", "/operacion", "/pagar"):
+    for ruta in ("/", "/laboratorio", "/ia", "/dashboard", "/operacion", "/pagar"):
         exportar.pagina(ruta)
 
     # Consultas sueltas.
     for url in ("/api/productos", "/api/productos?todos=1", "/api/configuracion", "/api/domicilios/mapa",
-                "/api/eventos", "/api/pedidos/cola", "/api/auth/yo"):
+                "/api/eventos", "/api/pedidos/cola", "/api/auth/yo", "/api/ia/estado"):
         exportar.json(url)
     for barrio in domicilios.BARRIOS:
         exportar.json("/api/domicilios/cotizar?" + urlencode({"barrio": barrio}))

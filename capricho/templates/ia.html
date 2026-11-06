@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Detector con IA · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Keras · autoencoder · aprendizaje sin etiquetas</p>
+    <h1>Detector de fraude con IA</h1>
+    <p>Las reglas solo atrapan lo que programamos. Esta red neuronal aprende cómo compran normalmente los clientes de Capricho y avisa cuando una compra no se parece a eso, aunque no rompa ninguna regla.</p>
+  </div>
+</section>
+
+<div class="contenedor dash" id="ia">
+  <div class="aviso aviso--alerta" id="ia-no-disponible" hidden>{{ icono("alerta") }}<p></p></div>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Cómo funciona</h2>
+    <ol class="pasos-ia">
+      <li><strong>1. Llega una compra</strong><span>Al mismo endpoint de siempre: <code class="mono">POST /api/transacciones</code>.</span></li>
+      <li><strong>2. Se convierte en 9 números</strong><span>Hora, monto y, sobre todo, qué tan distinta es de los hábitos de ese cliente.</span></li>
+      <li><strong>3. La red intenta reconstruirla</strong><span>Comprime los 9 números a 4 y los vuelve a armar. Solo sabe reconstruir compras parecidas a las que vio al entrenar.</span></li>
+      <li><strong>4. El error es el riesgo</strong><span>Si la reconstrucción falla mucho, la compra es rara: riesgo de 0 a 100. Desde 50 se marca anomalía.</span></li>
+    </ol>
+    <p class="tarjeta__sub separado">La red: cada columna es una capa y cada punto una neurona. El "cuello de botella" del centro obliga a la red a aprender lo esencial de una compra normal.</p>
+    <div class="grafica" id="g-arquitectura"></div>
+  </section>
+
+  <div class="kpis" id="ia-kpis"></div>
+
+  <div class="rejilla rejilla--12-8">
+    <section class="tarjeta tarjeta--grafica">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Curva de aprendizaje</h2><p class="tarjeta__sub">Error de reconstrucción en cada época. Si validación sube mientras entrenamiento baja, la red estaría memorizando; por eso se detiene sola cuando validación deja de mejorar.</p></div>
+      </div>
+      <div class="leyenda">
+        <span class="leyenda__item c-serie-1"><span class="leyenda__linea"></span>Entrenamiento</span>
+        <span class="leyenda__item c-serie-2"><span class="leyenda__linea"></span>Validación</span>
+      </div>
+      <div class="grafica" id="g-perdida"></div>
+    </section>
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">Lo que ve la red de cada compra</h2>
+      <ul class="lineas-precio" id="variables">
+        <li><span>Hora (seno y coseno)</span><span class="muted">23:59 queda junto a 00:00</span></li>
+        <li><span>Monto</span><span class="muted">en escala logarítmica</span></li>
+        <li><span>Monto vs. su habitual</span><span class="muted">mediana de sus últimas 30</span></li>
+        <li><span>Método de pago</span><span class="muted">% de veces que lo usa</span></li>
+        <li><span>Hora vs. su horario</span><span class="muted">distancia en el reloj</span></li>
+        <li><span>Compras en la última hora</span><span class="muted">ventana deslizante</span></li>
+        <li><span>Tiempo desde la anterior</span><span class="muted">en horas</span></li>
+        <li><span>Historial</span><span class="muted">cuántas compras tiene</span></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="rejilla rejilla--12-8">
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">¿Encuentra lo que las reglas no ven?</h2>
+      <p class="tarjeta__sub">Ataques construidos a partir del historial real de clientes; ninguno, salvo el último, rompe una regla. La IA no vio ninguno al entrenar.</p>
+      <div class="tabla-caja"><table class="tabla"><thead><tr><th>Ataque</th><th class="num">Casos</th><th>IA</th><th>Reglas</th></tr></thead><tbody id="t-evaluacion"></tbody></table></div>
+      <p class="tarjeta__sub separado" id="falsos-positivos"></p>
+    </section>
+    <section class="tarjeta tarjeta--grafica">
+      <h2 class="tarjeta__titulo">Error de reconstrucción</h2>
+      <p class="tarjeta__sub">Compras normales que el modelo no vio contra ataques. El umbral es el error que solo supera el 1 % de las normales.</p>
+      <div class="leyenda">
+        <span class="leyenda__item c-serie-3"><span class="leyenda__muestra"></span>Normales</span>
+        <span class="leyenda__item c-serie-1"><span class="leyenda__muestra"></span>Ataques</span>
+      </div>
+      <div class="grafica" id="g-histograma"></div>
+    </section>
+  </div>
+
+  <section class="tarjeta" id="probador">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Probador en vivo</h2><p class="tarjeta__sub">Describe una compra y los hábitos del cliente; la red responde al instante. No guarda nada.</p></div>
+    </div>
+    <div class="hero__acciones bloque" id="presets"></div>
+    <div class="probador">
+      <form id="form-probador" class="probador__form" novalidate>
+        <div class="fila-campos">
+          <div class="campo" data-campo="hora"><label for="p-hora">Hora de la compra · <strong id="v-hora"></strong></label><input id="p-hora" name="hora" type="range" min="0" max="23.75" step="0.25"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          <div class="campo" data-campo="valor"><label for="p-valor">Monto ($)</label><input id="p-valor" name="valor" type="number" min="100" step="500"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="metodo"><label for="p-metodo">Método de pago</label><select id="p-metodo" name="metodo"><option>Nequi</option><option>Tarjeta</option><option>Daviplata</option><option>PSE</option><option>Efectivo</option></select><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          <div class="campo" data-campo="proporcion_metodo"><label for="p-prop">Usa ese método en · <strong id="v-prop"></strong></label><input id="p-prop" name="proporcion_metodo" type="range" min="0" max="1" step="0.05"><span class="ayuda">de sus compras</span><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+        </div>
+        <p class="etiqueta">Hábitos del cliente</p>
+        <div class="fila-campos">
+          <div class="campo" data-campo="monto_habitual"><label for="p-habitual">Su compra habitual ($)</label><input id="p-habitual" name="monto_habitual" type="number" min="100" step="500"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          <div class="campo" data-campo="hora_habitual"><label for="p-hora-habitual">Suele comprar a las · <strong id="v-hora-habitual"></strong></label><input id="p-hora-habitual" name="hora_habitual" type="range" min="0" max="23.75" step="0.25"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="compras_ultima_hora"><label for="p-ultima">Compras en la última hora</label><input id="p-ultima" name="compras_ultima_hora" type="number" min="0" max="100" step="1"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          <div class="campo" data-campo="horas_desde_anterior"><label for="p-desde">Horas desde su compra anterior</label><input id="p-desde" name="horas_desde_anterior" type="number" min="0" step="0.05"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          <div class="campo" data-campo="compras_previas"><label for="p-previas">Compras anteriores</label><input id="p-previas" name="compras_previas" type="number" min="0" step="1"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+        </div>
+      </form>
+      <div class="probador__resultado" id="resultado-probador" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Limitaciones (uso responsable)</h2>
+    <ul class="limitaciones">
+      <li><strong>Datos de demostración.</strong> Se entrenó con 9 semanas de compras simuladas con hábitos realistas, no con clientes reales. Con datos reales hay que volver a entrenar y medir.</li>
+      <li><strong>Aprende lo que le muestres.</strong> En la primera versión el histórico traía fraudes que ninguna regla había detectado, y la red los aprendió como normales: detectaba 2 de 60. Por eso se entrena con un histórico revisado.</li>
+      <li><strong>Falsas alarmas.</strong> Por diseño, cerca del 1 al 2 % de las compras normales superan el umbral. No bloquea: marca para revisión humana.</li>
+      <li><strong>Clientes nuevos.</strong> Sin al menos 3 compras no hay hábito con qué comparar y la red decide solo con hora, monto y ritmo.</li>
+      <li><strong>Los hábitos cambian.</strong> Si un cliente cambia de horario o de método, al principio se verá raro. Hay que reentrenar periódicamente.</li>
+      <li><strong>Complementa, no reemplaza.</strong> Las reglas siguen bloqueando ráfagas y firmas falsas; la IA agrega lo que no se puede escribir como regla.</li>
+    </ul>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/ia.js') }}"></script>{% endblock %}

@@ -29,6 +29,7 @@
         <a href="{{ url_for('paginas.inicio') }}#arma">Arma el tuyo</a>
         <a href="{{ url_for('paginas.inicio') }}#domicilios">Domicilios</a>
         <a href="{{ url_for('paginas.laboratorio') }}" {% if request.endpoint == 'paginas.laboratorio' %}aria-current="page"{% endif %}>Laboratorio</a>
+        <a href="{{ url_for('paginas.ia') }}" {% if request.endpoint == 'paginas.ia' %}aria-current="page"{% endif %}>IA</a>
         {% if usuario and usuario.rol == 'ADMIN' %}
           <a href="{{ url_for('paginas.dashboard') }}" {% if request.endpoint == 'paginas.dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
           <a href="{{ url_for('paginas.operacion') }}" {% if request.endpoint == 'paginas.operacion' %}aria-current="page"{% endif %}>Operación</a>

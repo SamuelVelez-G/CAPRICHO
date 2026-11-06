@@ -170,6 +170,15 @@ def resumen(db, estado, filtro):
         nombre = _nombre_firma(f[0], f[1], f[2])
         firmas[nombre] = firmas.get(nombre, 0) + f[3]
 
+    ia = db.execute(
+        f"""SELECT COUNT(*) AS anomalias,
+                   COALESCE(SUM(NOT EXISTS (SELECT 1 FROM anomalias o WHERE o.transaccion_id = a.transaccion_id
+                                            AND o.tipo != 'COMPORTAMIENTO_INUSUAL')), 0) AS solo_ia
+            {UNION_ANOMALIAS} WHERE {where} AND a.tipo = 'COMPORTAMIENTO_INUSUAL'""", params).fetchone()
+    riesgo = db.execute(
+        f"""SELECT COUNT(t.riesgo_ia), AVG(t.riesgo_ia), MAX(t.riesgo_ia) FROM transacciones t
+            WHERE {where} AND t.riesgo_ia IS NOT NULL""", params).fetchone()
+
     with estado.candado:
         pila = filtrar_eventos(estado.pila_errores.elementos(), filtro)
 
@@ -198,6 +207,9 @@ def resumen(db, estado, filtro):
         "por_nivel": por_nivel,
         "por_tipo": por_tipo,
         "metodos": metodos,
+        "ia": {"activa": estado.ia is not None, "anomalias": ia["anomalias"], "solo_ia": ia["solo_ia"],
+               "evaluadas": riesgo[0], "riesgo_promedio": round(riesgo[1] or 0, 1),
+               "riesgo_maximo": round(riesgo[2] or 0, 1)},
         "firmas": sorted(({"firma": k, "cantidad": v} for k, v in firmas.items()), key=lambda x: -x["cantidad"]),
         "serie": _serie(db, filtro),
         "calor": _mapa_de_calor(db, filtro),
@@ -348,7 +360,7 @@ def listar_transacciones(db, filtro, estado=None, busqueda=None, pagina=1, por_p
     ).fetchone()[0]
     filas = filas_a_dicts(db.execute(
         f"""SELECT t.id, t.id_txn, t.valor, t.fecha_txn, t.metodo_pago, t.estado, t.origen, t.hash_valido,
-                   t.firma, t.fecha_creacion, u.email,
+                   t.firma, t.riesgo_ia, t.fecha_creacion, u.email,
                    (SELECT GROUP_CONCAT(tipo) FROM anomalias WHERE transaccion_id = t.id) AS tipos
             FROM transacciones t JOIN usuarios u ON u.id = t.usuario_id{donde}
             ORDER BY t.fecha_creacion DESC, t.id DESC LIMIT ? OFFSET ?""",

@@ -57,11 +57,20 @@
       </div>
       <div class="estados-anomalias" id="estados-anomalias"></div>
     </section>
-    <section class="tarjeta">
-      <h2 class="tarjeta__titulo">Verificación del hash</h2>
-      <p class="tarjeta__sub">Cómo se validó la firma de cada transacción recibida.</p>
-      <ul class="lineas-precio" id="firmas"></ul>
-    </section>
+    <div class="rejilla">
+      <section class="tarjeta">
+        <div class="tarjeta__cabeza">
+          <div><h2 class="tarjeta__titulo">Detección con IA (Keras)</h2><p class="tarjeta__sub">Compras que no se parecen a los hábitos del cliente.</p></div>
+          <a class="boton boton--xs boton--contorno" href="{{ url_for('paginas.ia') }}">Ver modelo</a>
+        </div>
+        <ul class="lineas-precio" id="resumen-ia"></ul>
+      </section>
+      <section class="tarjeta">
+        <h2 class="tarjeta__titulo">Verificación del hash</h2>
+        <p class="tarjeta__sub">Cómo se validó la firma de cada transacción recibida.</p>
+        <ul class="lineas-precio" id="firmas"></ul>
+      </section>
+    </div>
   </div>
 
   <section class="tarjeta">
@@ -199,6 +208,9 @@
           <div class="campo" data-campo="rafaga.maximo"><label for="r-raf-m">Ráfaga: máximo</label><input id="r-raf-m" name="rafaga_maximo" type="number" min="2"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
           <div class="campo" data-campo="rafaga.ventana_segundos"><label for="r-raf-v">en (s)</label><input id="r-raf-v" name="rafaga_ventana" type="number" step="0.1" min="0.1"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
           <div class="campo" data-campo="monto_atipico"><label for="r-monto">Monto atípico ($)</label><input id="r-monto" name="monto" type="number" step="1000" min="10000"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          <div class="campo" data-campo="ia_modo"><label for="r-ia">Detección con IA</label>
+            <select id="r-ia" name="ia_modo"><option value="marcar">Marcar como sospechosa</option><option value="observar">Solo observar (no cambia el resultado)</option><option value="apagada">Apagada</option></select>
+            <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
         </div>
         <label class="casilla bloque"><input type="checkbox" name="rafaga_llegada"> Ráfaga también por hora de llegada al servidor <span class="muted">(apágala si el generador envía muy rápido)</span></label>
         <div class="hero__acciones">
