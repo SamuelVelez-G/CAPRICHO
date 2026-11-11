@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS transacciones (
     hash                TEXT    NOT NULL,
     hash_valido         INTEGER NOT NULL CHECK (hash_valido IN (0, 1)),
     firma               TEXT,                           -- cómo se validó el hash
+    riesgo_ia           REAL,                           -- 0 a 100 según el autoencoder (NULL sin IA)
     metodo_pago         TEXT    NOT NULL,
     origen              TEXT    NOT NULL CHECK (origen IN ('API', 'LOTE', 'TIENDA', 'DEMO')),
     ip                  TEXT,

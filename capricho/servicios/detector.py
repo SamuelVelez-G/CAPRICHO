@@ -29,6 +29,7 @@ from ..registro import logger
 from ..seguridad import firmar_transaccion, verificar_hash
 from ..tiempo import a_texto, ahora, desde_texto
 from ..validaciones import validar_transaccion
+from ..ia import caracteristicas
 from . import usuarios
 
 # Diapositiva 38 ("venta" es "ventana": lo confirmó el profesor): la ventana
@@ -53,7 +54,11 @@ REGLAS_POR_DEFECTO = {
     # pruebas que envía muy rápido produciría ráfagas falsas.
     "rafaga": {"maximo": 5, "ventana_segundos": 1, "por_llegada": False},
     "monto_atipico": 300_000,
+    # IA: "marcar" (si es rara la deja SOSPECHOSA), "observar" (solo calcula y
+    # guarda el riesgo, sin tocar el resultado de las reglas) o "apagada".
+    "ia_modo": "marcar",
 }
+MODOS_IA = ("marcar", "observar", "apagada")
 
 TIPOS_ANOMALIA = {
     "POSIBLE_FRAUDE": "Múltiples transacciones dentro de la ventana",
@@ -61,6 +66,7 @@ TIPOS_ANOMALIA = {
     "HASH_INVALIDO": "Hash inválido: datos alterados o firma falsa",
     "MONTO_ATIPICO": "Monto fuera de lo normal",
     "PRECIO_MANIPULADO": "Precio alterado desde el navegador",
+    "COMPORTAMIENTO_INUSUAL": "IA: compra que no se parece a los hábitos del cliente",
 }
 NIVELES = ("BAJO", "MEDIO", "ALTO", "CRITICO")
 
@@ -163,11 +169,11 @@ def _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, lle
     momento = a_texto(llegada)
     cursor = db.execute(
         """INSERT INTO transacciones (id_txn, usuario_id, valor, fecha_txn, estado, hash, hash_valido, firma,
-                                      metodo_pago, origen, ip, fecha_creacion, fecha_actualizacion)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                      riesgo_ia, metodo_pago, origen, ip, fecha_creacion, fecha_actualizacion)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (txn["id_txn"], usuario_id, txn["valor"], a_texto(txn["fecha"]), estado_txn, txn["hash"],
-         int(txn["hash_valido"]), txn.get("firma", "firmada por la tienda"), txn["metodo_pago"], origen, ip,
-         momento, momento),
+         int(txn["hash_valido"]), txn.get("firma", "firmada por la tienda"), txn.get("riesgo_ia"),
+         txn["metodo_pago"], origen, ip, momento, momento),
     )
     transaccion_id = cursor.lastrowid
 
@@ -271,6 +277,25 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None,
             ))
             if estado_txn == "APROBADA":
                 estado_txn = "SOSPECHOSA"
+
+        # La IA (autoencoder de Keras) mira lo que las reglas no: si la compra
+        # se parece a los hábitos del cliente. Se evalúa con su historial ANTES
+        # de guardar esta transacción.
+        modo_ia = reglas.get("ia_modo", "marcar")
+        if estado.ia is not None and modo_ia != "apagada":
+            x, contexto = caracteristicas.desde_historial(db, usuario_id, txn["fecha"], txn["valor"],
+                                                          txn["metodo_pago"])
+            veredicto = estado.ia.evaluar(x, contexto)
+            txn["riesgo_ia"] = veredicto["riesgo"]
+            analisis["ia"] = {**veredicto, "modo": modo_ia}
+            if veredicto["anomalia"] and modo_ia == "marcar":
+                principal = veredicto["variables"][0]
+                anomalias.append(_anomalia(
+                    "COMPORTAMIENTO_INUSUAL", veredicto["nivel"], 1, 0,
+                    f"Riesgo IA {veredicto['riesgo']:.0f}/100. Lo más inusual: {principal['explicacion']}",
+                ))
+                if estado_txn == "APROBADA":
+                    estado_txn = "SOSPECHOSA"
 
         transaccion_id = _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, llegada)
         if confirmar:

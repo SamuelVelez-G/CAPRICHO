@@ -44,14 +44,16 @@ async function armar(txn, modo = "valida") {
 }
 
 // --- Consola ----------------------------------------------------------------------
+const a_ia = (txn) => (txn.analisis?.ia ? ` · riesgo IA ${Math.round(txn.analisis.ia.riesgo)}` : "");
 function resumen(status, datos) {
   const txn = datos.transaccion;
   if (txn) {
     const tipos = txn.anomalias.map((a) => `${a.tipo} (${a.nivel})`).join(", ");
+    const riesgo = a_ia(txn);
     const a = txn.analisis;
     const ventana = a.transacciones_en_ventana !== undefined
       ? ` · ${a.transacciones_en_ventana} en ventana de ${a.ventana_segundos}s` : "";
-    return [insignia(txn.estado), ` ${txn.usuario}${ventana}${tipos ? " · " + tipos : ""}`];
+    return [insignia(txn.estado), ` ${txn.usuario}${ventana}${riesgo}${tipos ? " · " + tipos : ""}`];
   }
   if (datos.lote) {
     return [`Lote: ${Object.entries(datos.lote.resumen).map(([k, v]) => `${v} ${k}`).join(", ")}`];
@@ -159,7 +161,24 @@ document.getElementById("firmar-json").addEventListener("click", async () => {
 });
 
 // --- Escenarios ----------------------------------------------------------------------------------
+/** Fecha de hace `dias` días a la hora indicada. */
+function haceDias(dias, hora, minuto) {
+  const fecha = new Date();
+  fecha.setDate(fecha.getDate() - dias);
+  fecha.setHours(hora, minuto, 0, 0);
+  return isoLocal(fecha);
+}
+
 const ESCENARIOS = [
+  {
+    nombre: "Fraude que solo ve la IA (Keras)", detalle: "6 compras de mediodía con Nequi y luego $250.000 a las 3 a. m. con PSE",
+    esperado: "las 6 APROBADAS; la última SOSPECHOSA por COMPORTAMIENTO_INUSUAL. Ninguna regla la detecta",
+    async correr(s) {
+      const usuario = `habitual+${s}@cliente.com`;
+      for (let d = 7; d >= 2; d--) await mandar(usuario, haceDias(d, 12, 5 + d * 3), "valida", 9000 + (d % 3) * 1500, "Nequi");
+      await mandar(usuario, haceDias(1, 3, 10), "valida", 250000, "PSE");
+    },
+  },
   {
     nombre: "Caso de uso 1 · Múltiples transacciones", detalle: "b@b.com a las 10:00:01, :02 y :03",
     esperado: "la tercera queda SOSPECHOSA (POSIBLE_FRAUDE)",
@@ -267,8 +286,8 @@ const ESCENARIOS = [
   },
 ];
 
-async function mandar(usuario, fecha, modo = "valida", valor = 50000) {
-  const txn = await armar({ idTxn: nuevoId(), user: usuario, date: fecha, value: valor, paymentMethod: "Tarjeta" }, modo);
+async function mandar(usuario, fecha, modo = "valida", valor = 50000, metodo = "Tarjeta") {
+  const txn = await armar({ idTxn: nuevoId(), user: usuario, date: fecha, value: valor, paymentMethod: metodo }, modo);
   return enviar("/api/transacciones", txn);
 }
 
@@ -300,7 +319,8 @@ async function cargarReglas() {
     for (const f of r.franjas) filas.push([`${f.nombre} (${f.desde.slice(0, 5)}–${f.hasta.slice(0, 5)})`, `${f.umbral} en ${f.ventana_segundos} s`]);
   }
   filas.push(["Ráfaga", `${r.rafaga.maximo} en menos de ${r.rafaga.ventana_segundos} s → bloqueo`],
-    ["Monto atípico", `desde ${dinero(r.monto_atipico)}`]);
+    ["Monto atípico", `desde ${dinero(r.monto_atipico)}`],
+    ["IA (Keras)", { marcar: "marca como sospechosa", observar: "solo observa", apagada: "apagada" }[r.ia_modo || "marcar"]]);
   vaciar(document.getElementById("reglas-activas"), ...filas.map(([k, v]) =>
     el("div", {}, el("span", { class: "muted", text: k }), el("strong", { text: v }))));
 }

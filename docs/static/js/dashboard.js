@@ -16,7 +16,7 @@ const SERIES_ESTADO = [
 const COLOR_NIVEL = { BAJO: css("--nivel-bajo"), MEDIO: css("--nivel-medio"), ALTO: css("--nivel-alto"), CRITICO: css("--nivel-critico") };
 const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
 const TIPO_CORTO = { POSIBLE_FRAUDE: "Posible fraude", RAFAGA: "Ráfaga", HASH_INVALIDO: "Hash inválido",
-  MONTO_ATIPICO: "Monto atípico", PRECIO_MANIPULADO: "Precio alterado" };
+  MONTO_ATIPICO: "Monto atípico", PRECIO_MANIPULADO: "Precio alterado", COMPORTAMIENTO_INUSUAL: "IA: inusual" };
 
 const estado = { fuente: "vivo", rango: "30d", por: "txn", casoVentana: null, casosVistos: "", datos: null, tipos: {}, paginaAnomalias: 1, paginaTxn: 1, vistas: {}, reglas: null, temporizador: null };
 const dash = document.getElementById("dash");
@@ -61,6 +61,7 @@ function pintar() {
   pintarGraficas();
   pintarListas(d);
   pintarFirmas(d);
+  pintarIA(d);
   pintarVentanaEnVivo(d);
   pintarPila(d.eventos);
   if (!estado.reglas) cargarReglas(d.reglas);
@@ -156,6 +157,18 @@ function pintarListas(d) {
     el("td", { class: "num", text: `${m.cantidad_transacciones} en ${numero(m.ventana_segundos, m.ventana_segundos % 1 ? 1 : 0)} s` }),
     el("td", { text: fechaCorta(m.fecha_txn) })))
     : [el("tr", {}, el("td", { colspan: "4", class: "muted", text: "Sin casos en el rango." }))]));
+}
+
+function pintarIA(d) {
+  const lista = document.getElementById("resumen-ia");
+  if (!d.ia.activa) {
+    vaciar(lista, el("li", {}, el("span", { class: "muted", text: "La IA no está activa: entrena el modelo con python herramientas/entrenar_ia.py" })));
+    return;
+  }
+  vaciar(lista,
+    el("li", {}, el("span", {}, icono("alerta"), " Anomalías de la IA"), el("strong", { text: numero(d.ia.anomalias) })),
+    el("li", {}, el("span", {}, icono("escudo"), " Que ninguna regla vio"), el("strong", { text: numero(d.ia.solo_ia) })),
+    el("li", {}, el("span", {}, icono("grafico"), " Riesgo promedio"), el("span", { text: `${numero(d.ia.riesgo_promedio, 1)} / 100 en ${numero(d.ia.evaluadas)} compras` })));
 }
 
 function pintarFirmas(d) {
@@ -455,7 +468,8 @@ async function cargarTransacciones() {
     el("td", { text: fechaCorta(t.fecha_txn) }),
     el("td", { text: t.metodo_pago }),
     el("td", { text: ORIGEN[t.origen] || t.origen }),
-    el("td", {}, insignia(t.estado), t.tipos ? el("div", { class: "muted", text: t.tipos.replaceAll(",", ", ") }) : null)))
+    el("td", {}, insignia(t.estado), t.tipos ? el("div", { class: "muted", text: t.tipos.replaceAll(",", ", ") }) : null,
+      t.riesgo_ia !== null && t.riesgo_ia !== undefined ? el("div", { class: "muted", text: `Riesgo IA ${numero(t.riesgo_ia, 0)}` }) : null)))
     : [el("tr", {}, el("td", { colspan: "7", class: "muted", text: "Sin resultados." }))]));
   document.getElementById("info-transacciones").textContent = `${numero(datos.total)} transacciones · página ${datos.pagina} de ${datos.paginas}`;
   document.getElementById("txn-prev").disabled = datos.pagina <= 1;
@@ -484,6 +498,7 @@ function cargarReglas(reglas) {
   formReglas.rafaga_maximo.value = reglas.rafaga.maximo;
   formReglas.rafaga_ventana.value = reglas.rafaga.ventana_segundos;
   formReglas.monto.value = reglas.monto_atipico;
+  formReglas.ia_modo.value = reglas.ia_modo || "marcar";
   formReglas.rafaga_llegada.checked = Boolean(reglas.rafaga.por_llegada);
   vaciar(document.getElementById("r-franjas"), ...reglas.franjas.map((f) => el("tr", { dataset: { clave: f.clave } },
     el("td", { text: f.nombre }),
@@ -512,12 +527,13 @@ function leerReglas() {
     rafaga: { maximo: aNumero(formReglas.rafaga_maximo.value), ventana_segundos: aNumero(formReglas.rafaga_ventana.value),
       por_llegada: formReglas.rafaga_llegada.checked },
     monto_atipico: aNumero(formReglas.monto.value),
+    ia_modo: formReglas.ia_modo.value,
   };
 }
 
 function soloCambios(nuevas) {
   const cambios = {};
-  const actuales = { ...estado.reglas,
+  const actuales = { ia_modo: "marcar", ...estado.reglas,
     rafaga: { por_llegada: false, ...estado.reglas.rafaga },
     franjas: estado.reglas.franjas.map((f) => ({ clave: f.clave, ventana_segundos: f.ventana_segundos, umbral: f.umbral })) };
   for (const [clave, valor] of Object.entries(nuevas)) {

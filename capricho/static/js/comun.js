@@ -47,7 +47,7 @@ async function apiEstatica(metodo, url) {
     error: "Esta combinación de filtros no se incluyó en la demo estática. Ejecuta el proyecto para verla completa." } };
 }
 
-const PAGINAS_ESTATICAS = { "/": "index.html", "/laboratorio": "laboratorio.html", "/dashboard": "dashboard.html",
+const PAGINAS_ESTATICAS = { "/": "index.html", "/laboratorio": "laboratorio.html", "/ia": "ia.html", "/dashboard": "dashboard.html",
   "/operacion": "operacion.html", "/pagar": "pagar.html", "/ingresar": "ingresar.html", "/registro": "registro.html",
   "/mis-pedidos": "index.html" };
 

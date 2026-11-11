@@ -514,7 +514,7 @@ fieldset.paso > legend { padding: 0; }
 .punto-vivo.pausado { background: #bba; animation: none; }
 @keyframes latir { 70% { box-shadow: 0 0 0 8px rgba(127, 224, 127, 0); } 100% { box-shadow: 0 0 0 0 rgba(127, 224, 127, 0); } }
 
-.dash { padding: 28px 0 80px; display: grid; gap: 22px; }
+.dash { padding: 28px 0 80px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
 .dash.cargando { opacity: .6; transition: opacity .2s; }
 .rejilla { display: grid; gap: 22px; }
 .rejilla--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -717,3 +717,33 @@ fieldset.paso > legend { padding: 0; }
 .pagina-simple { padding-top: 48px; }
 .leyenda__muestra--anillo { background: #fff; border: 2.5px solid var(--tinta); border-radius: 50%; }
 .leyenda__muestra--punto { border-radius: 50%; }
+
+/* --- Detector con IA ---------------------------------------------------------- */
+.pasos-ia { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.pasos-ia li { background: #fff; border: 1px solid var(--linea); border-radius: var(--radio-sm); padding: 14px; display: grid; gap: 6px; }
+.pasos-ia strong { color: var(--vino); }
+.pasos-ia span { font-size: .9rem; color: var(--tinta-2); }
+@media (max-width: 860px) { .pasos-ia { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .pasos-ia { grid-template-columns: 1fr; } }
+
+.barra-mini__fila { display: flex; align-items: center; gap: 10px; min-width: 150px; }
+.barra-mini { flex: 1; height: 10px; border-radius: 999px; background: #f1e6d6; overflow: hidden; }
+.barra-mini span { display: block; height: 100%; border-radius: 999px; }
+.barra-mini__fila strong { font-variant-numeric: tabular-nums; font-size: .88rem; min-width: 44px; text-align: right; }
+
+.probador { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 26px; align-items: start; }
+.probador input[type="range"] { padding: 0; accent-color: var(--vino); }
+.probador__resultado { background: #fff; border: 1px solid var(--linea); border-radius: var(--radio); padding: 20px; position: sticky; top: 96px; }
+.riesgo-grande { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.riesgo-grande strong { font-size: 3.4rem; line-height: 1; font-weight: 700; }
+.riesgo-grande > span:not(.insignia) { color: var(--tinta-3); font-weight: 600; }
+.medidor { position: relative; height: 14px; border-radius: 999px; background: #f1e6d6; margin: 14px 0 8px; }
+.medidor__relleno { position: absolute; inset: 0 auto 0 0; border-radius: 999px; transition: width .3s; }
+.medidor__umbral { position: absolute; left: 50%; top: -5px; bottom: -5px; width: 2px; background: var(--tinta); }
+.aportes { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 12px; }
+.aportes li { display: grid; gap: 4px; font-size: .9rem; }
+.aportes__cabeza { display: flex; justify-content: space-between; gap: 10px; }
+.aportes__barra { display: block; height: 8px; border-radius: 999px; background: #f1e6d6; overflow: hidden; }
+.aportes__barra span { display: block; height: 100%; background: var(--serie-1); border-radius: 999px; }
+.limitaciones { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 8px; }
+@media (max-width: 860px) { .probador { grid-template-columns: 1fr; } .probador__resultado { position: static; } }

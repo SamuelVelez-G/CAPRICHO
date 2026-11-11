@@ -45,6 +45,15 @@ DOMINIOS = ["gmail.com", "hotmail.com", "outlook.com", "correo.co", "yahoo.com"]
 METODOS = ["Nequi"] * 7 + ["Tarjeta"] * 5 + ["Daviplata"] * 3 + ["PSE"] * 2 + ["Efectivo"] * 3
 VALORES = [7_000, 9_000, 9_000, 11_000, 12_000, 14_000, 16_000, 18_000, 21_000, 24_000, 27_000, 32_000, 38_000]
 
+# Cada cliente tiene hábitos, como en la realidad: un método de pago que usa
+# casi siempre, un tipo de pedido y un horario. Es lo que aprende la IA.
+MONTOS_PERFIL = {
+    "antojo": [7_000, 9_000, 9_000, 11_000, 12_000],
+    "combo": [14_000, 16_000, 18_000, 21_000, 24_000],
+    "familiar": [27_000, 32_000, 38_000, 45_000],
+}
+HORARIOS_PERFIL = [8, 10, 13, 16, 19]
+
 HORAS_NORMALES = {6: 1, 7: 3, 8: 5, 9: 6, 10: 6, 11: 5, 12: 5, 13: 4, 14: 5, 15: 6, 16: 7,
                   17: 7, 18: 6, 19: 5, 20: 4, 21: 3, 22: 1}
 HORAS_FRAUDE = {0: 2, 1: 2, 2: 1, 3: 1, 9: 1, 11: 1, 14: 1, 16: 1, 18: 2, 19: 3, 20: 4, 21: 4, 22: 4, 23: 3}
@@ -123,6 +132,7 @@ def sembrar(db, estado, config):
     sembrar_base(db, config)
 
     correos = [config["CLIENTE_DEMO_EMAIL"]]
+    perfiles = {}
     for nombre, apellido in CLIENTES:
         email = f"{_sin_tildes(nombre)}.{_sin_tildes(apellido)}@{rng.choice(DOMINIOS)}".lower()
         telefono = "3" + "".join(str(rng.randrange(10)) for _ in range(9))
@@ -131,7 +141,25 @@ def sembrar(db, estado, config):
                VALUES (?, ?, ?, ?, ?)""",
             (f"{nombre} {apellido}", email, telefono, creado, creado))
         correos.append(email)
+    for email in correos:
+        perfiles[email] = {
+            "metodo": rng.choice(METODOS),
+            "montos": MONTOS_PERFIL[rng.choices(list(MONTOS_PERFIL), weights=[5, 4, 2])[0]],
+            "hora": rng.choice(HORARIOS_PERFIL),
+        }
     estado.reconstruir(db)
+
+    def compra_habitual(dia):
+        """Una compra normal: casi siempre dentro de los hábitos del cliente."""
+        email = rng.choice(correos)
+        perfil = perfiles[email]
+        if rng.random() < 0.85:
+            hora = min(22, max(6, round(rng.gauss(perfil["hora"], 1.5))))
+        else:
+            hora = _pesos(rng, HORAS_NORMALES)
+        valor = rng.choice(perfil["montos"]) if rng.random() < 0.85 else rng.choice(VALORES)
+        metodo = perfil["metodo"] if rng.random() < 0.8 else rng.choice(METODOS)
+        return ("normal", _instante(rng, dia, hora), email, valor, metodo)
 
     # --- Historia de 9 semanas: así "30 días" se compara con los 30 anteriores ---
     eventos = []
@@ -139,45 +167,51 @@ def sembrar(db, estado, config):
         dia = hoy - timedelta(days=dias_atras)
         cantidad = rng.randint(30, 50) + (12 if dia.weekday() >= 5 else 0)
         for _ in range(cantidad):
-            eventos.append(("normal", _instante(rng, dia, _pesos(rng, HORAS_NORMALES)),
-                            rng.choice(correos), rng.choice(VALORES)))
+            eventos.append(compra_habitual(dia))
 
         if rng.random() < 0.75:                                  # 3 o 4 en la ventana
             inicio = _instante(rng, dia, _pesos(rng, HORAS_FRAUDE))
             usuario = rng.choice(correos)
             for n in range(rng.choice([3, 3, 3, 4])):
                 eventos.append(("normal", inicio + timedelta(seconds=n * rng.uniform(0.35, 0.85)),
-                                usuario, rng.choice(VALORES)))
+                                usuario, rng.choice(VALORES), None))
         if rng.random() < 0.2:                                   # ráfaga: 5 o 6 en menos de 1 s
             inicio = _instante(rng, dia, _pesos(rng, HORAS_FRAUDE))
             usuario = rng.choice(correos)
             for n in range(rng.choice([5, 6])):
                 eventos.append(("normal", inicio + timedelta(milliseconds=n * rng.randint(110, 170)),
-                                usuario, rng.choice(VALORES)))
+                                usuario, rng.choice(VALORES), None))
         if rng.random() < 0.3:                                   # alguien alteró el valor
             eventos.append(("hash_alterado", _instante(rng, dia, _pesos(rng, HORAS_FRAUDE)),
-                            rng.choice(correos), rng.choice(VALORES)))
+                            rng.choice(correos), rng.choice(VALORES), None))
         if rng.random() < 0.22:                                  # monto atípico
             eventos.append(("normal", _instante(rng, dia, _pesos(rng, HORAS_FRAUDE)),
-                            rng.choice(correos), rng.randrange(320, 1500) * 1000))
+                            rng.choice(correos), rng.randrange(320, 1500) * 1000, None))
+        # Fraude silencioso: ninguna regla lo ve. Para entrenar la IA se siembra
+        # SIN estos casos (histórico revisado); la demo sí los trae.
+        if rng.random() < 0.12 and config.get("SEMBRAR_FRAUDES_SILENCIOSOS", True):
+            victima = rng.choice(correos)
+            otro_metodo = rng.choice([m for m in sorted(set(METODOS)) if m != perfiles[victima]["metodo"]])
+            eventos.append(("normal", _instante(rng, dia, rng.choice([1, 2, 3, 4])), victima,
+                            rng.randrange(150, 290) * 1000, otro_metodo))
         if rng.random() < 0.1:                                   # precio manipulado en la tienda
             eventos.append(("precio", _instante(rng, dia, _pesos(rng, HORAS_NORMALES)),
-                            rng.choice(correos), rng.choice([2_000, 3_000, 5_000])))
+                            rng.choice(correos), rng.choice([2_000, 3_000, 5_000]), None))
         if dias_atras <= 12:                                     # pedidos de la tienda
             for _ in range(rng.randint(1, 3)):
                 eventos.append(("pedido", _instante(rng, dia, _pesos(rng, HORAS_NORMALES)),
-                                rng.choice(correos[:12]), None))
+                                rng.choice(correos[:12]), None, None))
 
     eventos = [e for e in eventos if e[1] <= momento_actual - timedelta(minutes=5)]
     eventos = merge_sort(eventos, clave=lambda e: e[1])          # orden cronológico
 
     pedidos = []
-    for numero, (tipo, instante, email, valor) in enumerate(eventos, start=1):
+    for numero, (tipo, instante, email, valor, metodo) in enumerate(eventos, start=1):
         if tipo == "pedido":
             pedidos.append(_pedido(db, estado, rng, instante, email))
             continue
         txn = {"id_txn": str(100000 + numero), "email": email, "fecha": instante,
-               "valor": valor, "metodo_pago": rng.choice(METODOS)}
+               "valor": valor, "metodo_pago": metodo or rng.choice(METODOS)}
         externo = {"idTxn": txn["id_txn"], "user": email, "date": a_texto(instante),
                    "value": valor, "paymentMethod": txn["metodo_pago"]}
         txn["hash"] = firmar_transaccion(externo, llave)

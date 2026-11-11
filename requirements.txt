@@ -1,1 +1,4 @@
 flask>=3.1,<4
+# Detector con IA: Keras 3 sobre PyTorch (TensorFlow aún no tiene versión para Python 3.14).
+keras>=3.15
+torch>=2.9

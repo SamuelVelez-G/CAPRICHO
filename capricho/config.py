@@ -63,6 +63,10 @@ class Configuracion:
     # transacción de prueba. En producción esto se apaga (CAPRICHO_LABORATORIO=0).
     MODO_LABORATORIO = os.environ.get("CAPRICHO_LABORATORIO", "1") == "1"
 
+    # Detección con IA (autoencoder de Keras). Si no hay modelo entrenado o
+    # Keras no está instalado, el sistema sigue solo con las reglas.
+    IA_ACTIVA = os.environ.get("CAPRICHO_IA", "1") == "1"
+
     # Si la base de datos está vacía, se llena con datos de demostración.
     SEMBRAR_DATOS = True
 

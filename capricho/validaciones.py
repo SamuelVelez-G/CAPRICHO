@@ -449,12 +449,12 @@ def _ventana_y_umbral(bloque, prefijo, errores):
 def validar_reglas(datos, actuales, parcial=False):
     """PUT reemplaza la configuración completa; PATCH mezcla solo lo enviado."""
     exigir_objeto(datos)
-    permitidos = {"modo", "regla_fija", "franjas", "rafaga", "monto_atipico"}
+    permitidos = {"modo", "regla_fija", "franjas", "rafaga", "monto_atipico", "ia_modo"}
     desconocidos = set(datos) - permitidos
     if desconocidos:
         raise ErrorValidacion({c: "Campo desconocido" for c in sorted(desconocidos)})
     if not parcial:
-        faltan = permitidos - set(datos)
+        faltan = permitidos - set(datos) - {"ia_modo"}      # opcional: bases viejas no lo traen
         if faltan:
             raise ErrorValidacion({c: "Obligatorio en PUT (usa PATCH para cambios parciales)" for c in sorted(faltan)})
 
@@ -506,6 +506,12 @@ def validar_reglas(datos, actuales, parcial=False):
                 errores["rafaga.por_llegada"] = "Debe ser true o false"
             if not any(c.startswith("rafaga.") for c in errores):
                 nuevas["rafaga"] = {"maximo": maximo, "ventana_segundos": ventana, "por_llegada": por_llegada}
+
+    if "ia_modo" in datos:
+        if datos["ia_modo"] not in ("marcar", "observar", "apagada"):
+            errores["ia_modo"] = "Debe ser marcar, observar o apagada"
+        else:
+            nuevas["ia_modo"] = datos["ia_modo"]
 
     if "monto_atipico" in datos:
         monto = datos["monto_atipico"]

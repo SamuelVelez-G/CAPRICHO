@@ -33,7 +33,10 @@ def main():
     print(f"\n  Capricho corriendo en http://{argumentos.host}:{argumentos.puerto}")
     print(f"  Administrador: {app.config['ADMIN_EMAIL']} / {app.config['ADMIN_PASSWORD']}")
     print(f"  Cliente demo:  {app.config['CLIENTE_DEMO_EMAIL']} / {app.config['CLIENTE_DEMO_PASSWORD']}")
-    print(f"  Endpoint:      POST http://{argumentos.host}:{argumentos.puerto}/api/transacciones\n")
+    print(f"  Endpoint:      POST http://{argumentos.host}:{argumentos.puerto}/api/transacciones")
+    ia_activa = app.extensions["capricho"].ia is not None
+    print("  IA (Keras):    " + ("activa\n" if ia_activa
+                                 else "DESACTIVADA (¿activaste el entorno .venv con pip install -r requirements.txt?)\n"))
     app.run(host=argumentos.host, port=argumentos.puerto, debug=False, threaded=True)
 
 
