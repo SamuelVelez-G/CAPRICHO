@@ -11,8 +11,8 @@ Pasos:
   3. División: 70 % entrenamiento, 15 % calibración del umbral, 15 % prueba.
   4. Entrenamiento: el autoencoder aprende a reconstruir compras normales.
   5. Umbral: el error que solo supera el 1 % de las compras normales de calibración.
-  6. Evaluación: compras normales que no vio (falsos positivos) y 5 tipos de
-     ataque que construimos a propósito, comparando IA contra reglas.
+  6. Evaluación: compras normales que no vio y ataques sintéticos. La columna
+     de reglas ejecuta las mismas reglas transaccionales que el detector.
   7. Se guardan el modelo (.keras) y los metadatos (umbral, normalización,
      curva de aprendizaje y resultados) en capricho/ia/artefactos/.
 """
@@ -40,10 +40,10 @@ from capricho.db import conectar  # noqa: E402
 from capricho.ia import caracteristicas  # noqa: E402
 from capricho.ia.modelo import ARCHIVO_METADATOS, ARCHIVO_MODELO, CARPETA, DetectorIA, construir  # noqa: E402
 from capricho.registro import logger  # noqa: E402
+from capricho.servicios import detector  # noqa: E402
 from capricho.tiempo import desde_texto  # noqa: E402
 
 SEMILLA = 42
-MONTO_ATIPICO_REGLA = 300_000
 
 
 def datos_de_entrenamiento(db):
@@ -69,7 +69,7 @@ def datos_de_entrenamiento(db):
 
 
 def ataques(db, rng):
-    """Compras fraudulentas que NO rompen ninguna regla (o casi ninguna).
+    """Mezcla ataques silenciosos y casos que las reglas ya detectan.
 
     Se parte del historial real de un cliente y se cambia lo que haría un
     defraudador. Cada caso queda con su contexto para explicarlo.
@@ -82,7 +82,7 @@ def ataques(db, rng):
 
     def base(hora):
         usuario = rng.choice(usuarios)
-        dia = (ultima - timedelta(days=rng.randint(0, 20))).replace(hour=0, minute=0, second=0, microsecond=0)
+        dia = (ultima + timedelta(days=rng.randint(1, 20))).replace(hour=0, minute=0, second=0, microsecond=0)
         fecha = dia + timedelta(hours=hora, minutes=rng.randrange(60))
         filas = db.execute("SELECT metodo_pago FROM transacciones WHERE usuario_id = ? AND fecha_txn < ?",
                            (usuario, fecha.isoformat(timespec="milliseconds"))).fetchall()
@@ -91,6 +91,11 @@ def ataques(db, rng):
         _, contexto = caracteristicas.desde_historial(db, usuario, fecha, 10_000, raro)
         contexto["metodo"] = raro
         contexto["proporcion_metodo"] = usados[-30:].count(raro) / max(1, len(usados[-30:]))
+        contexto["_usuario_id"] = usuario
+        contexto["_fecha"] = fecha
+        contexto["_fechas_extra"] = []
+        contexto["_hash_valido"] = True
+        contexto["_repetida"] = False
         return contexto
 
     for _ in range(60):
@@ -108,19 +113,56 @@ def ataques(db, rng):
         c = base(rng.uniform(0, 24))
         c["valor"] = rng.choice([1_000, 1_500, 2_000])
         c["compras_ultima_hora"] = rng.randint(2, 4)
-        c["horas_desde_anterior"] = rng.uniform(1, 6) / 60
+        cantidad = c["compras_ultima_hora"]
+        c["_fechas_extra"] = [c["_fecha"] - timedelta(minutes=3 * i) for i in range(1, cantidad + 1)]
+        c["horas_desde_anterior"] = (c["_fecha"] - c["_fechas_extra"][0]).total_seconds() / 3600
         casos.append(("Prueba de tarjeta", c))
 
         # 4. Cliente nuevo con un monto alto a deshoras.
         c = base(rng.uniform(0, 5))
         c.update({"valor": rng.randrange(180, 290) * 1000, "compras_previas": 0, "monto_habitual": 0,
-                  "horas_desde_anterior": caracteristicas.TOPE_HORAS})
+                  "horas_desde_anterior": caracteristicas.TOPE_HORAS, "_usuario_id": None,
+                  "_fechas_extra": []})
         casos.append(("Cliente nuevo, monto alto", c))
 
         # 5. Monto atípico clásico: este SÍ lo detecta la regla de $300.000.
         c = base(rng.uniform(8, 20))
         c["valor"] = rng.randrange(320, 900) * 1000
         casos.append(("Monto atípico (regla)", c))
+
+        # 6. Ráfaga: se inyectan eventos previos por debajo de un segundo.
+        c = base(rng.uniform(8, 20))
+        reglas = detector.cargar_reglas(db)
+        rafaga = reglas["rafaga"]
+        intervalo = rafaga["ventana_segundos"] / (rafaga["maximo"] + 1)
+        c["_fechas_extra"] = [c["_fecha"] - timedelta(seconds=intervalo * i)
+                              for i in range(1, rafaga["maximo"])]
+        c["compras_ultima_hora"] = rafaga["maximo"] - 1
+        c["horas_desde_anterior"] = intervalo / 3600
+        casos.append(("Ráfaga transaccional", c))
+
+        # 7. Ventana de frecuencia de la franja activa (sin llegar a ráfaga).
+        c = base(rng.uniform(8, 20))
+        regla = detector.regla_aplicable(reglas, c["_fecha"])
+        intervalo = regla["ventana_segundos"] / (regla["umbral"] + 1)
+        c["_fechas_extra"] = [c["_fecha"] - timedelta(seconds=intervalo * i)
+                              for i in range(1, regla["umbral"])]
+        c["compras_ultima_hora"] = regla["umbral"] - 1
+        c["horas_desde_anterior"] = intervalo / 3600
+        casos.append(("Umbral de ventana", c))
+
+        # 8. Integridad y replay: son reglas que no dependen del comportamiento.
+        c = base(rng.uniform(8, 20))
+        c["_hash_valido"] = False
+        casos.append(("Firma inválida", c))
+        c = base(rng.uniform(8, 20))
+        c["_repetida"] = True
+        casos.append(("ID de transacción repetido", c))
+
+        # 9. La tienda también detecta discrepancias de precio antes de crear el pedido.
+        c = base(rng.uniform(8, 20))
+        c["_precio_manipulado"] = True
+        casos.append(("Precio manipulado en tienda", c))
 
     for _, c in casos:
         if not c["monto_habitual"]:
@@ -186,27 +228,45 @@ def main():
     ARCHIVO_METADATOS.write_text(json.dumps(metadatos, ensure_ascii=False, indent=1), encoding="utf-8")
 
     print("4/6  Calculando el umbral con compras que el modelo no vio...")
-    detector = DetectorIA()
-    errores_calibracion, _ = detector.errores(calibracion)
+    ia_detector = DetectorIA()
+    errores_calibracion, _ = ia_detector.errores(calibracion)
     umbral = float(np.percentile(errores_calibracion, 99))
-    detector.umbral = umbral
+    ia_detector.umbral = umbral
 
     print("5/6  Evaluando: compras normales nuevas y ataques que construimos...")
-    errores_prueba, _ = detector.errores(prueba)
+    errores_prueba, _ = ia_detector.errores(prueba)
     falsos_positivos = int((errores_prueba > umbral).sum())
     casos = ataques(db, rng)
     por_tipo = {}
     errores_ataque = []
     ejemplos = []
     for tipo, contexto in casos:
-        resultado = detector.evaluar(caracteristicas.desde_contexto(contexto), contexto)
+        resultado = ia_detector.evaluar(caracteristicas.desde_contexto(contexto), contexto)
         errores_ataque.append(resultado["error"])
-        regla = contexto["valor"] >= MONTO_ATIPICO_REGLA
-        fila = por_tipo.setdefault(tipo, {"tipo": tipo, "casos": 0, "ia": 0, "reglas": 0, "combinado": 0})
+        reglas_activas = detector.cargar_reglas(db)
+        usuario_id = contexto.get("_usuario_id")
+        fecha = contexto["_fecha"]
+        fechas_extra = contexto.get("_fechas_extra", [])
+        reglas_txn = detector.evaluar_reglas_transaccion(
+            reglas_activas, fecha, contexto["valor"],
+            lambda ventana: detector.contar_en_ventana_con_fechas(
+                db, usuario_id, fecha, ventana, fechas_extra),
+            hash_valido=contexto.get("_hash_valido", True),
+            repetida=contexto.get("_repetida", False),
+        )
+        tipos_reglas = list(reglas_txn["tipos"])
+        if contexto.get("_precio_manipulado"):
+            tipos_reglas.append("PRECIO_MANIPULADO")
+        regla = bool(tipos_reglas)
+        fila = por_tipo.setdefault(tipo, {"tipo": tipo, "casos": 0, "ia": 0, "reglas": 0,
+                                          "combinado": 0, "reglas_motivos": []})
         fila["casos"] += 1
         fila["ia"] += int(resultado["anomalia"])
         fila["reglas"] += int(regla)
         fila["combinado"] += int(resultado["anomalia"] or regla)
+        for motivo in tipos_reglas:
+            if motivo not in fila["reglas_motivos"]:
+                fila["reglas_motivos"].append(motivo)
         if len([e for e in ejemplos if e["tipo"] == tipo]) < 1:
             ejemplos.append({"tipo": tipo, "riesgo": resultado["riesgo"],
                              "explicacion": [v["explicacion"] for v in resultado["variables"][:3]]})

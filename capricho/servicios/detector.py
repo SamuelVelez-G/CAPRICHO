@@ -119,28 +119,34 @@ def regla_aplicable(reglas, instante) -> dict:
 #  Ventana deslizante sobre la base de datos
 # =============================================================================
 
-def contar_en_ventana(db, usuario_id, instante, ventana_segundos) -> int:
-    """Cuántas transacciones del usuario caben en una misma ventana junto a
-    la nueva.
-
-    1. Búsqueda por índice: se piden SOLO las transacciones del usuario a
-       menos de `ventana` segundos (antes o después; en un lote pueden
-       llegar desordenadas). El índice (usuario_id, fecha_txn) evita
-       recorrer la tabla completa.
-    2. Búsqueda binaria (bisect) para ubicar la nueva en su lugar.
-    3. Dos punteros para encontrar la ventana más llena que la contenga.
-    """
-    delta = timedelta(seconds=ventana_segundos)
-    filas = db.execute(
-        """SELECT fecha_txn FROM transacciones
-           WHERE usuario_id = ? AND fecha_txn > ? AND fecha_txn < ?
-           ORDER BY fecha_txn""",
-        (usuario_id, a_texto(instante - delta), a_texto(instante + delta)),
-    ).fetchall()
-    # Cada vecina se expresa en segundos respecto a la nueva (que queda en 0).
-    desfases = [(desde_texto(fila["fecha_txn"]) - instante).total_seconds() for fila in filas]
+def contar_fechas_en_ventana(instante, fechas, ventana_segundos) -> int:
+    """Cuenta una ventana deslizante sobre fechas reales o simuladas."""
+    desfases = sorted((desde_texto(f) if isinstance(f, str) else f) - instante
+                      for f in fechas)
+    desfases = [d.total_seconds() for d in desfases]
     bisect.insort(desfases, 0.0)
     return max_en_ventana(desfases, 0.0, ventana_segundos)
+
+
+def contar_en_ventana_con_fechas(db, usuario_id, instante, ventana_segundos, fechas_extra=()):
+    """Cuenta transacciones existentes y, opcionalmente, eventos simulados."""
+    delta = timedelta(seconds=ventana_segundos)
+    if usuario_id is None:
+        previas = []
+    else:
+        filas = db.execute(
+            """SELECT fecha_txn FROM transacciones
+               WHERE usuario_id = ? AND fecha_txn > ? AND fecha_txn < ?
+               ORDER BY fecha_txn""",
+            (usuario_id, a_texto(instante - delta), a_texto(instante + delta)),
+        ).fetchall()
+        previas = [fila["fecha_txn"] for fila in filas]
+    return contar_fechas_en_ventana(instante, [*previas, *fechas_extra], ventana_segundos)
+
+
+def contar_en_ventana(db, usuario_id, instante, ventana_segundos) -> int:
+    """Cuenta las transacciones cercanas del usuario, incluyendo la candidata."""
+    return contar_en_ventana_con_fechas(db, usuario_id, instante, ventana_segundos)
 
 
 def contar_llegadas(db, usuario_id, llegada, ventana_segundos) -> int:
@@ -154,6 +160,74 @@ def contar_llegadas(db, usuario_id, llegada, ventana_segundos) -> int:
         (usuario_id, desde, a_texto(llegada)),
     ).fetchone()[0]
     return previas + 1
+
+
+def evaluar_reglas_transaccion(reglas, instante, valor, contar_ventana, *, hash_valido=True,
+                               por_llegada=1, repetida=False):
+    """Aplica las mismas reglas de la transacción real a un candidato.
+
+    ``contar_ventana(segundos)`` debe devolver el número de transacciones,
+    incluida la candidata, en la ventana indicada. El callback permite usar
+    tanto las consultas reales de SQLite como una secuencia sintética para
+    evaluar escenarios de entrenamiento.
+    """
+    if repetida:
+        return {"estado": "DUPLICADA", "tipos": ["REPLAY"], "anomalias": [],
+                "detectada": True, "analisis": {"repetida": True}}
+
+    regla = regla_aplicable(reglas, instante)
+    rafaga = reglas["rafaga"]
+    por_fecha = contar_ventana(rafaga["ventana_segundos"])
+    llegada = por_llegada if rafaga.get("por_llegada", False) else 1
+    en_ventana = contar_ventana(regla["ventana_segundos"])
+    en_rafaga = max(por_fecha, llegada)
+    estado_txn = "APROBADA"
+    anomalias = []
+
+    if not hash_valido:
+        estado_txn = "RECHAZADA"
+        anomalias.append(_anomalia(
+            "HASH_INVALIDO", "CRITICO", 1, 0,
+            "El hash recibido no coincide con el que se calcula sobre los datos (HMAC-SHA256 con la "
+            "llave compartida ni SHA-256): los datos se alteraron en el camino o la firma es falsa.",
+        ))
+
+    if en_rafaga >= rafaga["maximo"]:
+        estado_txn = "RECHAZADA"
+        anomalias.append(_anomalia(
+            "RAFAGA", "CRITICO", en_rafaga, rafaga["ventana_segundos"],
+            f"{en_rafaga} transacciones en menos de {rafaga['ventana_segundos']:g} s. "
+            f"Un usuario no puede hacer {rafaga['maximo']} en el mismo segundo: se bloqueó.",
+        ))
+    elif en_ventana >= regla["umbral"]:
+        if estado_txn == "APROBADA":
+            estado_txn = "SOSPECHOSA"
+        nivel = "MEDIO" if en_ventana == regla["umbral"] else "ALTO"
+        anomalias.append(_anomalia(
+            "POSIBLE_FRAUDE", nivel, en_ventana, regla["ventana_segundos"],
+            f"{en_ventana} transacciones dentro de {regla['ventana_segundos']:g} s "
+            f"(umbral {regla['umbral']}) · {regla['nombre']}",
+        ))
+
+    if valor >= reglas["monto_atipico"]:
+        anomalias.append(_anomalia(
+            "MONTO_ATIPICO", "BAJO", 1, 0,
+            f"Monto {dinero(valor)} igual o mayor al límite de {dinero(reglas['monto_atipico'])}",
+        ))
+        if estado_txn == "APROBADA":
+            estado_txn = "SOSPECHOSA"
+
+    analisis = {
+        "regla": regla["nombre"],
+        "ventana_segundos": regla["ventana_segundos"],
+        "umbral": regla["umbral"],
+        "transacciones_en_ventana": en_ventana,
+        "rafaga_maximo": rafaga["maximo"],
+        "rafaga_por_fecha": por_fecha,
+        "rafaga_por_llegada": llegada,
+    }
+    return {"estado": estado_txn, "tipos": [a["tipo"] for a in anomalias],
+            "anomalias": anomalias, "detectada": bool(anomalias), "analisis": analisis}
 
 
 # =============================================================================
@@ -218,65 +292,20 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None,
             )
 
         reglas = cargar_reglas(db)
-        regla = regla_aplicable(reglas, txn["fecha"])
         usuario_id = usuarios.obtener_o_crear_por_email(db, estado, txn["email"], llegada)
-        anomalias = []
-        analisis = {
-            "hash_valido": bool(txn["hash_valido"]),
-            "firma": txn.get("firma", "firmada por la tienda"),
-            "regla": regla["nombre"],
-            "ventana_segundos": regla["ventana_segundos"],
-            "umbral": regla["umbral"],
-        }
-
-        # Todas las transacciones cuentan en la ventana, también las de hash
-        # inválido: el intento ocurrió aunque los datos vengan alterados.
         rafaga = reglas["rafaga"]
-        por_fecha = contar_en_ventana(db, usuario_id, txn["fecha"], rafaga["ventana_segundos"])
         por_llegada = (contar_llegadas(db, usuario_id, llegada, rafaga["ventana_segundos"])
                        if contar_llegada and rafaga.get("por_llegada", False) else 1)
-        en_ventana = contar_en_ventana(db, usuario_id, txn["fecha"], regla["ventana_segundos"])
-        analisis.update({
-            "transacciones_en_ventana": en_ventana,
-            "rafaga_maximo": rafaga["maximo"],
-            "rafaga_por_fecha": por_fecha,
-            "rafaga_por_llegada": por_llegada,
-        })
-
-        estado_txn = "APROBADA"
-        if not txn["hash_valido"]:
-            estado_txn = "RECHAZADA"
-            anomalias.append(_anomalia(
-                "HASH_INVALIDO", "CRITICO", 1, 0,
-                "El hash recibido no coincide con el que se calcula sobre los datos (HMAC-SHA256 con la "
-                "llave compartida ni SHA-256): los datos se alteraron en el camino o la firma es falsa.",
-            ))
-
-        en_rafaga = max(por_fecha, por_llegada)
-        if en_rafaga >= rafaga["maximo"]:
-            estado_txn = "RECHAZADA"
-            anomalias.append(_anomalia(
-                "RAFAGA", "CRITICO", en_rafaga, rafaga["ventana_segundos"],
-                f"{en_rafaga} transacciones en menos de {rafaga['ventana_segundos']:g} s. "
-                f"Un usuario no puede hacer {rafaga['maximo']} en el mismo segundo: se bloqueó.",
-            ))
-        elif en_ventana >= regla["umbral"]:
-            if estado_txn == "APROBADA":
-                estado_txn = "SOSPECHOSA"
-            nivel = "MEDIO" if en_ventana == regla["umbral"] else "ALTO"
-            anomalias.append(_anomalia(
-                "POSIBLE_FRAUDE", nivel, en_ventana, regla["ventana_segundos"],
-                f"{en_ventana} transacciones dentro de {regla['ventana_segundos']:g} s "
-                f"(umbral {regla['umbral']}) · {regla['nombre']}",
-            ))
-
-        if txn["valor"] >= reglas["monto_atipico"]:
-            anomalias.append(_anomalia(
-                "MONTO_ATIPICO", "BAJO", 1, 0,
-                f"Monto {dinero(txn['valor'])} igual o mayor al límite de {dinero(reglas['monto_atipico'])}",
-            ))
-            if estado_txn == "APROBADA":
-                estado_txn = "SOSPECHOSA"
+        reglas_txn = evaluar_reglas_transaccion(
+            reglas, txn["fecha"], txn["valor"],
+            lambda ventana: contar_en_ventana(db, usuario_id, txn["fecha"], ventana),
+            hash_valido=txn["hash_valido"], por_llegada=por_llegada,
+        )
+        anomalias = reglas_txn["anomalias"]
+        estado_txn = reglas_txn["estado"]
+        analisis = {"hash_valido": bool(txn["hash_valido"]),
+                    "firma": txn.get("firma", "firmada por la tienda"),
+                    **reglas_txn["analisis"]}
 
         # La IA (autoencoder de Keras) mira lo que las reglas no: si la compra
         # se parece a los hábitos del cliente. Se evalúa con su historial ANTES

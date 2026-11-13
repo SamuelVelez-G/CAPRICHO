@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="csrf-token" content="B3YikFLmLq7I60ezKADidzyDYekWN46z1MPxU3CWAO0">
+  <meta name="csrf-token" content="0dHeBjgpJkfSd4F4frdGhjNHj-3nF9YetbogGS7CCUk">
   <meta name="description" content="Capricho, granizado de café artesanal en Aranjuez, Medellín. Pide a domicilio o recoge en tienda.">
   <meta name="theme-color" content="#75383f">
   <title>Detector con IA · Capricho</title>
@@ -73,7 +73,7 @@
       <li><strong>1. Llega una compra</strong><span>Al mismo endpoint de siempre: <code class="mono">POST /api/transacciones</code>.</span></li>
       <li><strong>2. Se convierte en 9 números</strong><span>Hora, monto y, sobre todo, qué tan distinta es de los hábitos de ese cliente.</span></li>
       <li><strong>3. La red intenta reconstruirla</strong><span>Comprime los 9 números a 4 y los vuelve a armar. Solo sabe reconstruir compras parecidas a las que vio al entrenar.</span></li>
-      <li><strong>4. El error es el riesgo</strong><span>Si la reconstrucción falla mucho, la compra es rara: riesgo de 0 a 100. Desde 50 se marca anomalía.</span></li>
+      <li><strong>4. El error mide la rareza</strong><span>El puntaje va de 0 a 100 y no es una probabilidad. Se marca anomalía cuando el error de reconstrucción supera el umbral.</span></li>
     </ol>
     <p class="tarjeta__sub separado">La red: cada columna es una capa y cada punto una neurona. El "cuello de botella" del centro obliga a la red a aprender lo esencial de una compra normal.</p>
     <div class="grafica" id="g-arquitectura"></div>
@@ -110,7 +110,7 @@
   <div class="rejilla rejilla--12-8">
     <section class="tarjeta">
       <h2 class="tarjeta__titulo">¿Encuentra lo que las reglas no ven?</h2>
-      <p class="tarjeta__sub">Ataques construidos a partir del historial real de clientes; ninguno, salvo el último, rompe una regla. La IA no vio ninguno al entrenar.</p>
+      <p class="tarjeta__sub">La columna de reglas ejecuta la misma lógica del detector: ventanas por franja, ráfagas, firma, repetición de ID y monto. Incluye un escenario de precio manipulado de la tienda. La IA no vio estos escenarios al entrenar.</p>
       <div class="tabla-caja"><table class="tabla"><thead><tr><th>Ataque</th><th class="num">Casos</th><th>IA</th><th>Reglas</th></tr></thead><tbody id="t-evaluacion"></tbody></table></div>
       <p class="tarjeta__sub separado" id="falsos-positivos"></p>
     </section>
@@ -127,9 +127,23 @@
 
   <section class="tarjeta" id="probador">
     <div class="tarjeta__cabeza">
-      <div><h2 class="tarjeta__titulo">Probador en vivo</h2><p class="tarjeta__sub">Describe una compra y los hábitos del cliente; la red responde al instante. No guarda nada.</p></div>
+      <div><h2 class="tarjeta__titulo">Probador en vivo</h2><p class="tarjeta__sub">Simula una compra hipotética con el historial de un cliente real o con un perfil manual. La evaluación no registra ni modifica compras.</p></div>
     </div>
-    <div class="hero__acciones bloque" id="presets"></div>
+    <div id="selector-perfil" class="fila-campos" hidden>
+      <div class="campo"><label for="modo-perfil">Perfil de evaluación</label>
+        <select id="modo-perfil"><option value="real">Cliente real de la base de datos</option><option value="manual">Perfil manual / escenarios</option></select>
+      </div>
+    </div>
+      <div class="hero__acciones bloque" id="presets"></div>
+      <div id="perfil-real" class="perfil-real" hidden>
+        <div class="fila-campos">
+          <div class="campo"><label for="cliente-real">Cliente real de la base de datos</label>
+            <select id="cliente-real"><option value="">Cargando clientes…</option></select>
+            <span class="ayuda">Solo se muestran clientes con compras; sus datos se usan únicamente para calcular el historial del caso hipotético.</span>
+          </div>
+        </div>
+        <p class="tarjeta__sub" id="resumen-cliente-real" aria-live="polite"></p>
+      </div>
     <div class="probador">
       <form id="form-probador" class="probador__form" novalidate>
         <div class="fila-campos">
@@ -140,15 +154,17 @@
           <div class="campo" data-campo="metodo"><label for="p-metodo">Método de pago</label><select id="p-metodo" name="metodo"><option>Nequi</option><option>Tarjeta</option><option>Daviplata</option><option>PSE</option><option>Efectivo</option></select><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
           <div class="campo" data-campo="proporcion_metodo"><label for="p-prop">Usa ese método en · <strong id="v-prop"></strong></label><input id="p-prop" name="proporcion_metodo" type="range" min="0" max="1" step="0.05"><span class="ayuda">de sus compras</span><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
         </div>
-        <p class="etiqueta">Hábitos del cliente</p>
-        <div class="fila-campos">
-          <div class="campo" data-campo="monto_habitual"><label for="p-habitual">Su compra habitual ($)</label><input id="p-habitual" name="monto_habitual" type="number" min="100" step="500"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
-          <div class="campo" data-campo="hora_habitual"><label for="p-hora-habitual">Suele comprar a las · <strong id="v-hora-habitual"></strong></label><input id="p-hora-habitual" name="hora_habitual" type="range" min="0" max="23.75" step="0.25"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
-        </div>
-        <div class="fila-campos">
-          <div class="campo" data-campo="compras_ultima_hora"><label for="p-ultima">Compras en la última hora</label><input id="p-ultima" name="compras_ultima_hora" type="number" min="0" max="100" step="1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
-          <div class="campo" data-campo="horas_desde_anterior"><label for="p-desde">Horas desde su compra anterior</label><input id="p-desde" name="horas_desde_anterior" type="number" min="0" step="0.05"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
-          <div class="campo" data-campo="compras_previas"><label for="p-previas">Compras anteriores</label><input id="p-previas" name="compras_previas" type="number" min="0" step="1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+        <div id="habitos-manuales">
+          <p class="etiqueta">Hábitos del perfil manual</p>
+          <div class="fila-campos">
+            <div class="campo" data-campo="monto_habitual"><label for="p-habitual">Su compra habitual ($)</label><input id="p-habitual" name="monto_habitual" type="number" min="100" step="500"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+            <div class="campo" data-campo="hora_habitual"><label for="p-hora-habitual">Suele comprar a las · <strong id="v-hora-habitual"></strong></label><input id="p-hora-habitual" name="hora_habitual" type="range" min="0" max="23.75" step="0.25"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          </div>
+          <div class="fila-campos">
+            <div class="campo" data-campo="compras_ultima_hora"><label for="p-ultima">Compras en la última hora</label><input id="p-ultima" name="compras_ultima_hora" type="number" min="0" max="100" step="1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+            <div class="campo" data-campo="horas_desde_anterior"><label for="p-desde">Horas desde su compra anterior</label><input id="p-desde" name="horas_desde_anterior" type="number" min="0" step="0.05"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+            <div class="campo" data-campo="compras_previas"><label for="p-previas">Compras anteriores</label><input id="p-previas" name="compras_previas" type="number" min="0" step="1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          </div>
         </div>
       </form>
       <div class="probador__resultado" id="resultado-probador" aria-live="polite"></div>

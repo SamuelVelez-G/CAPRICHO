@@ -5,7 +5,9 @@ import { histogramaDoble, lineas } from "./graficas.js";
 
 const css = (nombre) => getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
 const formulario = document.getElementById("form-probador");
+const puedeUsarClientes = document.body.dataset.rol === "ADMIN" && !ESTATICO;
 let modelo = null;
+let solicitudActual = 0;
 
 const hhmm = (hora) => `${String(Math.floor(hora)).padStart(2, "0")}:${String(Math.round((hora % 1) * 60)).padStart(2, "0")}`;
 
@@ -109,13 +111,25 @@ function barraPorcentaje(valor, color) {
   return el("div", { class: "barra-mini__fila" }, pista, el("strong", { text: `${numero(valor, 0)} %` }));
 }
 
+const NOMBRES_REGLAS = {
+  POSIBLE_FRAUDE: "Ventana de frecuencia",
+  RAFAGA: "Límite de ráfagas",
+  HASH_INVALIDO: "Firma inválida",
+  MONTO_ATIPICO: "Monto atípico",
+  REPLAY: "ID repetido",
+  PRECIO_MANIPULADO: "Precio manipulado",
+};
+
 function pintarEvaluacion() {
   const e = modelo.evaluacion;
   vaciar(document.getElementById("t-evaluacion"), ...e.por_tipo.map((t) => el("tr", {},
     el("td", { text: t.tipo }),
     el("td", { class: "num", text: numero(t.casos) }),
     el("td", {}, barraPorcentaje(t.ia / t.casos * 100, css("--serie-1"))),
-    el("td", {}, barraPorcentaje(t.reglas / t.casos * 100, css("--tinta-3"))))));
+    el("td", {}, barraPorcentaje(t.reglas / t.casos * 100, css("--tinta-3")),
+      el("small", { class: "muted", text: t.reglas_motivos?.length
+        ? `Detectan: ${t.reglas_motivos.map((r) => NOMBRES_REGLAS[r] || r).join(", ")}`
+        : "No la detectan estas reglas" })))));
   document.getElementById("falsos-positivos").textContent =
     `Compras normales que no vio: ${e.falsos_positivos} falsas alarmas de ${numero(e.normales_prueba)} (${numero(e.tasa_falsos_positivos, 1)} %). ` +
     `Umbral: percentil ${modelo.percentil_umbral} del error en compras normales de calibración (${numero(modelo.umbral, 3)}).`;
@@ -159,25 +173,42 @@ function programarEvaluacion() {
 }
 
 async function evaluar() {
+  const idSolicitud = ++solicitudActual;
   formulario.querySelectorAll(".campo").forEach((c) => c.classList.remove("invalido"));
   const caja = document.getElementById("resultado-probador");
-  const { ok, datos } = await api("POST", "/api/ia/evaluar", leer());
+  const cuerpo = leer();
+  const real = modoReal();
+  const respuesta = real
+    ? await api("POST", "/api/ia/evaluar-cliente", {
+      usuario_id: Number(document.getElementById("cliente-real").value),
+      hora: cuerpo.hora, valor: cuerpo.valor, metodo: cuerpo.metodo,
+    })
+    : await api("POST", "/api/ia/evaluar", cuerpo);
+  if (idSolicitud !== solicitudActual) return;
+  const { ok, datos } = respuesta;
   if (!ok) {
     mostrarErrores(formulario, datos.errores);
     vaciar(caja, el("div", { class: "aviso aviso--alerta" }, icono("info"), el("p", { text: datos.error })));
     return;
   }
   const r = datos.resultado;
+  if (datos.cliente) {
+    const c = datos.contexto;
+    document.getElementById("resumen-cliente-real").textContent =
+      `Historial de ${datos.cliente.nombre} (${datos.cliente.email}): ${numero(c.compras_previas)} compras anteriores, ` +
+      `monto habitual ${dinero(c.monto_habitual)}, método elegido usado en ${numero(c.proporcion_metodo * 100)} % ` +
+      `y ${numero(c.compras_ultima_hora)} compras en la última hora. La compra evaluada es hipotética.`;
+  }
   const medidor = el("div", { class: "medidor" }, el("span", { class: "medidor__relleno" }), el("span", { class: "medidor__umbral" }));
   medidor.firstChild.style.width = `${r.riesgo}%`;
   medidor.firstChild.style.background = r.anomalia ? css("--critico") : css("--ok");
   vaciar(caja,
-    el("p", { class: "eyebrow", text: "Riesgo según la IA" }),
-    el("div", { class: "riesgo-grande" }, el("strong", { text: numero(r.riesgo, 0) }), el("span", { text: "/ 100" }),
-      el("span", { class: `insignia insignia--${r.anomalia ? "RECHAZADA" : "APROBADA"}` },
+    el("p", { class: "eyebrow", text: "Puntaje de anomalía · no es probabilidad de fraude" }),
+    el("div", { class: "riesgo-grande" }, el("strong", { text: numero(r.riesgo, 1) }), el("span", { text: "/ 100" }),
+      el("span", { class: `insignia insignia--${r.anomalia ? "SOSPECHOSA" : "APROBADA"}` },
         icono(r.anomalia ? "alerta" : "ok"), r.anomalia ? "Anomalía" : "Normal")),
     medidor,
-    el("p", { class: "tarjeta__sub", text: `Error de reconstrucción ${numero(r.error, 3)} · umbral ${numero(r.umbral, 3)} (riesgo 50)` }),
+    el("p", { class: "tarjeta__sub", text: `Error de reconstrucción ${numero(r.error, 4)} · umbral ${numero(r.umbral, 4)}. Se marca anomalía cuando el error supera el umbral.` }),
     el("p", { class: "etiqueta separado", text: "Qué hizo que se viera rara" }),
     el("ul", { class: "aportes" }, ...r.variables.slice(0, 5).map((v) => {
       const barra = el("span", { class: "aportes__barra" }, el("span"));
@@ -192,17 +223,58 @@ function iniciarProbador() {
     el("button", { class: `boton boton--sm ${i ? "boton--contorno" : ""}`, type: "button", onClick: (evento) => {
       document.querySelectorAll("#presets button").forEach((b) => b.classList.add("boton--contorno"));
       evento.currentTarget.classList.remove("boton--contorno");
-      escribir(p.datos);
+      if (modoReal()) escribirCompra(p.datos);
+      else escribir(p.datos);
       evaluar();
     } }, p.nombre)));
   formulario.addEventListener("input", programarEvaluacion);
   formulario.addEventListener("submit", (evento) => evento.preventDefault());
+  if (puedeUsarClientes) configurarPerfilesReales();
   escribir(PRESETS[0].datos);
   if (ESTATICO) {
     vaciar(document.getElementById("resultado-probador"), el("div", { class: "aviso aviso--alerta" }, icono("info"),
       el("p", { text: "En la demo estática el probador no puede consultar la red. Ejecuta el proyecto con python run.py para usarlo." })));
     return;
   }
+  evaluar();
+}
+
+function escribirCompra(datos) {
+  for (const campo of ["hora", "valor", "metodo"]) formulario.elements[campo].value = datos[campo];
+  etiquetas();
+}
+
+function modoReal() {
+  return puedeUsarClientes && document.getElementById("modo-perfil")?.value === "real";
+}
+
+async function configurarPerfilesReales() {
+  const selector = document.getElementById("selector-perfil");
+  const modo = document.getElementById("modo-perfil");
+  const cliente = document.getElementById("cliente-real");
+  selector.hidden = false;
+  const respuesta = await api("GET", "/api/ia/clientes");
+  const clientes = respuesta.ok ? respuesta.datos.clientes : [];
+  if (!clientes.length) {
+    modo.value = "manual";
+    modo.querySelector('option[value="real"]').disabled = true;
+    document.getElementById("resumen-cliente-real").textContent =
+      respuesta.datos.error || "No hay clientes con compras en la base de datos; usa un escenario manual.";
+  } else {
+    vaciar(cliente, ...clientes.map((c) => el("option", { value: c.id,
+      text: `${c.nombre} · ${c.email} · ${numero(c.compras)} compras` })));
+  }
+  modo.addEventListener("change", actualizarModoPerfil);
+  cliente.addEventListener("change", evaluar);
+  actualizarModoPerfil();
+}
+
+function actualizarModoPerfil() {
+  const real = modoReal();
+  document.getElementById("perfil-real").hidden = !real;
+  document.getElementById("habitos-manuales").hidden = real;
+  document.getElementById("presets").setAttribute("aria-label", real
+    ? "Escenarios de compra para el cliente seleccionado" : "Escenarios de compra manuales");
   evaluar();
 }
 
