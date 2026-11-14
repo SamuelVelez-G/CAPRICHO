@@ -178,12 +178,22 @@ async function evaluar() {
   const caja = document.getElementById("resultado-probador");
   const cuerpo = leer();
   const real = modoReal();
+  const nuevo = modoNuevo();
+  const compraEvaluada = nuevo ? {
+    ...cuerpo,
+    proporcion_metodo: 0.5,
+    monto_habitual: cuerpo.valor,
+    hora_habitual: cuerpo.hora,
+    compras_ultima_hora: 0,
+    horas_desde_anterior: 720,
+    compras_previas: 0,
+  } : cuerpo;
   const respuesta = real
     ? await api("POST", "/api/ia/evaluar-cliente", {
       usuario_id: Number(document.getElementById("cliente-real").value),
       hora: cuerpo.hora, valor: cuerpo.valor, metodo: cuerpo.metodo,
     })
-    : await api("POST", "/api/ia/evaluar", cuerpo);
+    : await api("POST", "/api/ia/evaluar", compraEvaluada);
   if (idSolicitud !== solicitudActual) return;
   const { ok, datos } = respuesta;
   if (!ok) {
@@ -223,7 +233,7 @@ function iniciarProbador() {
     el("button", { class: `boton boton--sm ${i ? "boton--contorno" : ""}`, type: "button", onClick: (evento) => {
       document.querySelectorAll("#presets button").forEach((b) => b.classList.add("boton--contorno"));
       evento.currentTarget.classList.remove("boton--contorno");
-      if (modoReal()) escribirCompra(p.datos);
+      if (modoReal() || modoNuevo()) escribirCompra(p.datos);
       else escribir(p.datos);
       evaluar();
     } }, p.nombre)));
@@ -248,6 +258,10 @@ function modoReal() {
   return puedeUsarClientes && document.getElementById("modo-perfil")?.value === "real";
 }
 
+function modoNuevo() {
+  return puedeUsarClientes && document.getElementById("modo-perfil")?.value === "nuevo";
+}
+
 async function configurarPerfilesReales() {
   const selector = document.getElementById("selector-perfil");
   const modo = document.getElementById("modo-perfil");
@@ -264,15 +278,27 @@ async function configurarPerfilesReales() {
     vaciar(cliente, ...clientes.map((c) => el("option", { value: c.id,
       text: `${c.nombre} · ${c.email} · ${numero(c.compras)} compras` })));
   }
-  modo.addEventListener("change", actualizarModoPerfil);
+  modo.addEventListener("change", () => {
+    if (modoNuevo()) {
+      const escenarioNuevo = PRESETS.find((p) => p.nombre === "Cliente nuevo, monto alto");
+      escribirCompra(escenarioNuevo.datos);
+    }
+    actualizarModoPerfil();
+  });
   cliente.addEventListener("change", evaluar);
   actualizarModoPerfil();
 }
 
 function actualizarModoPerfil() {
   const real = modoReal();
+  const nuevo = modoNuevo();
   document.getElementById("perfil-real").hidden = !real;
-  document.getElementById("habitos-manuales").hidden = real;
+  document.getElementById("habitos-manuales").hidden = real || nuevo;
+  document.getElementById("aviso-nuevo-cliente").hidden = !nuevo;
+  document.querySelector('[data-campo="proporcion_metodo"]').hidden = real || nuevo;
+  document.getElementById("etiqueta-escenarios").textContent = real
+    ? "Casos de prueba · modifican la compra hipotética, conservan el historial real"
+    : "Casos de prueba · selecciónalos y ajusta sus datos";
   document.getElementById("presets").setAttribute("aria-label", real
     ? "Escenarios de compra para el cliente seleccionado" : "Escenarios de compra manuales");
   evaluar();

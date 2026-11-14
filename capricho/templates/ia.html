@@ -77,10 +77,14 @@
     </div>
     <div id="selector-perfil" class="fila-campos" hidden>
       <div class="campo"><label for="modo-perfil">Perfil de evaluación</label>
-        <select id="modo-perfil"><option value="real">Cliente real de la base de datos</option><option value="manual">Perfil manual / escenarios</option></select>
+        <select id="modo-perfil"><option value="real">Cliente real de la base de datos</option><option value="nuevo">Nuevo cliente · sin historial</option><option value="manual">Perfil manual · simular escenarios</option></select>
       </div>
     </div>
+      <p class="etiqueta" id="etiqueta-escenarios">Casos de prueba · selecciónalos y ajusta sus datos</p>
       <div class="hero__acciones bloque" id="presets"></div>
+      <p class="tarjeta__sub" id="aviso-nuevo-cliente" hidden>
+        Se simula una persona sin compras previas: el modelo no conoce su monto ni horario habitual. Puedes cambiar hora, monto y método, o cargar uno de los casos de prueba.
+      </p>
       <div id="perfil-real" class="perfil-real" hidden>
         <div class="fila-campos">
           <div class="campo"><label for="cliente-real">Cliente real de la base de datos</label>
