@@ -74,9 +74,34 @@ class DetectorIA(PruebaCapricho):
             self.assertEqual(cuerpo["estado"], "APROBADA")
         cuerpo = self.enviar_txn(usuario, self.hoy - timedelta(days=1) + timedelta(hours=3, minutes=10),
                                  valor=250000, metodo="PSE").get_json()
-        self.assertEqual(cuerpo["anomalias"], ["COMPORTAMIENTO_INUSUAL"])   # ninguna regla, solo la IA
+        # Ninguna regla de la primera entrega la ve; sí el clasificador, el autoencoder y los cuartiles del cliente.
+        self.assertEqual(set(cuerpo["anomalias"]), {"FRAUDE_CLASIFICADOR", "COMPORTAMIENTO_INUSUAL",
+                                                    "MONTO_FUERA_DE_CUARTILES"})
         self.assertEqual(cuerpo["estado"], "SOSPECHOSA")
-        self.assertGreaterEqual(cuerpo["transaccion"]["analisis"]["ia"]["riesgo"], 50)
+        analisis = cuerpo["transaccion"]["analisis"]
+        self.assertGreaterEqual(analisis["ia"]["riesgo"], 50)
+        self.assertGreaterEqual(analisis["clasificador"]["probabilidad"], analisis["clasificador"]["umbral"])
+
+    def test_cliente_nuevo_se_juzga_con_el_conocimiento_general(self):
+        """Observación del profesor: sin historial, la red decide con lo que aprendió de todos."""
+        nuevo = self.enviar_txn("recien.llegado@correo.co", self.hoy - timedelta(hours=20) + timedelta(hours=3),
+                                valor=480000, metodo="PSE").get_json()
+        normal = self.enviar_txn("otro.nuevo@correo.co", self.hoy - timedelta(hours=10), valor=12000,
+                                 metodo="Nequi").get_json()
+        clasificador = nuevo["transaccion"]["analisis"]["clasificador"]
+        self.assertEqual(clasificador["segmento"], "cliente nuevo")
+        self.assertEqual(clasificador["conocimiento"]["general"], 100.0)
+        self.assertEqual(clasificador["clasificacion"], "FRAUDULENTA")
+        self.assertEqual(normal["transaccion"]["analisis"]["clasificador"]["clasificacion"], "NORMAL")
+
+    def test_inferencia_numpy_igual_a_keras(self):
+        import numpy as np
+
+        from capricho.ia import operaciones
+        clasificador = self.app.extensions["capricho"].clasificador
+        x = np.random.default_rng(1).normal(size=(50, len(operaciones.NOMBRES))).astype("float32")
+        keras_p = clasificador.modelo.predict(x, verbose=0)[:, 0]
+        self.assertLess(float(np.abs(clasificador.probabilidades(x) - keras_p).max()), 1e-4)
 
 
 if __name__ == "__main__":

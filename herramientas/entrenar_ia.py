@@ -27,11 +27,10 @@ import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
-os.environ.setdefault("KERAS_BACKEND", "torch")
-
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
+import capricho.ia  # noqa: E402,F401  (elige el motor de Keras: TensorFlow)
 import keras  # noqa: E402
 import numpy as np  # noqa: E402
 
@@ -138,6 +137,7 @@ def main():
     # entraran, la red los aprendería como normales (se comprobó: con ellos
     # solo detectaba 2 de 60).
     app = create_app({"BASE_DATOS": str(temporal / "datos.db"), "CARPETA_LOGS": str(temporal / "logs"),
+                      "CARPETA_COMPROBANTES": str(temporal / "comprobantes"),
                       "IA_ACTIVA": False, "SEMBRAR_FRAUDES_SILENCIOSOS": False})
     db = conectar(app.config["BASE_DATOS"])
 

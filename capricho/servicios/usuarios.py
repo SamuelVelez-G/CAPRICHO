@@ -10,6 +10,11 @@ from ..seguridad import HASH_DE_RELLENO, hashear_password, verificar_password
 from ..tiempo import a_texto, ahora
 
 
+# Cliente genérico de la caja: cada persona que paga sin registrarse es alguien
+# distinto, así que nunca se le arma un historial ni una ventana deslizante.
+CONSUMIDOR_FINAL = "consumidor.final@capricho.co"
+
+
 def _nombre_desde_email(email: str) -> str:
     """laura.gomez@correo.co -> Laura Gomez (para usuarios que llegan por la API)."""
     local = email.split("@")[0].replace(".", " ").replace("_", " ").replace("-", " ")

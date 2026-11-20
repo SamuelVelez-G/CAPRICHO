@@ -25,7 +25,7 @@ from . import alertas, catalogo, detector, domicilios, facturacion, pagos, usuar
 from .detector import dinero
 
 CANALES = ("PRESENCIAL", "WEB", "APP", "DOMICILIO")
-CONSUMIDOR_FINAL = "consumidor.final@capricho.co"
+CONSUMIDOR_FINAL = usuarios.CONSUMIDOR_FINAL
 DESCUENTO_ALTO = 30          # % desde el que un descuento genera alerta por sí solo
 
 

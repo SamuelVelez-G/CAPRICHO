@@ -14,7 +14,10 @@ from .estructuras import Cola, IndiceHash, LimitadorVentana, Pila
 class EstadoMemoria:
     def __init__(self, llave_hmac: bytes, limite_por_segundo=40):
         self.llave_hmac = llave_hmac               # para firmar las compras de la tienda
-        self.ia = None                             # autoencoder de Keras (si está entrenado)
+        self.ia = None                             # autoencoder de Keras: rareza para ESE cliente
+        self.clasificador = None                   # red de Keras: normal o fraudulenta (aprende de todos)
+        self.monto = None                          # regresión de Keras: monto esperado
+        self.demanda = None                        # red de Keras: ventas de los próximos días
         self.cola_pedidos = Cola()                 # ids de pedidos SOLICITADOS
         self.pila_errores = Pila()                 # eventos sin atender
         self.indice_usuarios = IndiceHash()        # email  -> id

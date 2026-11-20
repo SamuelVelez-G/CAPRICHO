@@ -1,0 +1,22 @@
+[
+  {"nombre": "galleta de avena", "categoria": "adiciones", "precio": "$2.000", "stock": "120"},
+  {"nombre": "Galleta de Avena ", "categoria": "Adiciones", "precio": 2000, "stock": 80},
+  {"nombre": "Té helado", "categoria": "bebida", "precio": "4.500", "stock": 40},
+  {"nombre": "Limonada natural", "categoria": "Bebidaz", "precio": "5000", "stock": 30},
+  {"nombre": "Cheesecake de maracuyá", "categoria": "postres", "precio": 85000, "stock": 12},
+  {"nombre": "Muffin de arándanos", "categoria": "Panadería", "precio": 4000, "stock": 20},
+  {"nombre": "Brownie", "categoria": "Postres", "precio": 5000, "stock": 10},
+  {"nombre": "GALLETA OREO", "categoria": "Adiciones", "precio": 2000},
+  {"nombre": "Pandebono", "categoria": "postres"},
+  {"nombre": "Malteada <script>", "categoria": "Bebidas", "precio": 9000},
+  {"nombre": "Capuchino helado", "categoria": "BEBIDAS", "precio": "6,5 mil", "stock": 25},
+  {"nombre": "Galleta Festival", "categoria": "Adición", "precio": "2000.00", "stock": 150},
+  {"nombre": "Wafer de vainilla", "categoria": "Adiciones", "precio": "dos mil", "stock": 60},
+  {"nombre": "Torta de queso", "categoria": "Postres", "precio": "7.500", "stock": 14},
+  {"nombre": "Café con leche", "categoria": "Bebidas", "precio": 4500, "stock": 50},
+  {"nombre": "Aromática de frutos rojos", "categoria": "bebidas calientes", "precio": 3500, "stock": 40},
+  {"nombre": "Chocolatina Jet", "categoria": "Adiciones", "precio": "1.500", "stock": "200"},
+  {"nombre": "Galleta Chips Ahoy", "categoria": "Adiciones", "precio": 2500, "stock": -5},
+  {"nombre": "Postre de natas", "categoria": "Postres", "precio": "$ 6.000", "stock": 8},
+  {"nombre": "Jugo de mango", "categoria": "Bebidas", "precio": "4000", "stock": 35}
+]

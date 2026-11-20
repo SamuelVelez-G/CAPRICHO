@@ -27,7 +27,7 @@ from . import alertas
 
 MINIMO_PERSONAL = 5         # compras para tener perfil propio
 VENTANA_DIAS = 90
-_cache_poblacion = {"momento": 0.0, "perfil": None}
+_cache_poblacion = {}      # ruta de la base -> (momento, perfil)
 
 
 # =============================================================================
@@ -118,20 +118,18 @@ def perfil_poblacion(db, momento=None):
     """Perfil de los montos aprobados de todos los clientes (últimos 30 días).
     Con momento=None se guarda en memoria 5 minutos porque se usa en cada transacción."""
     ahora_s = time.monotonic()
-    if momento is None and _cache_poblacion["perfil"] and ahora_s - _cache_poblacion["momento"] < 300:
-        return _cache_poblacion["perfil"]
+    base = db.execute("PRAGMA database_list").fetchone()[2]
+    guardado = _cache_poblacion.get(base)
+    if momento is None and guardado and ahora_s - guardado[0] < 300:
+        return guardado[1]
     desde = a_texto((momento or ahora()) - timedelta(days=30))
     valores = [f[0] for f in db.execute(
         "SELECT valor FROM transacciones WHERE estado = 'APROBADA' AND fecha_txn >= ? ORDER BY id DESC LIMIT 5000",
         (desde,))]
     resumen = perfil(valores) or perfil([10_000, 12_000, 15_000])
     if momento is None:
-        _cache_poblacion.update(momento=ahora_s, perfil=resumen)
+        _cache_poblacion[base] = (ahora_s, resumen)
     return resumen
-
-
-def olvidar_poblacion():
-    _cache_poblacion.update(momento=0.0, perfil=None)
 
 
 def evaluar_transaccion(db, usuario_id, valor, fecha, poblacion=None):

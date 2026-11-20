@@ -44,7 +44,7 @@ def create_app(config=None):
 
     estado = EstadoMemoria(app.config["LLAVE_HMAC"], app.config["LIMITE_PETICIONES_POR_SEGUNDO"])
     if app.config["IA_ACTIVA"]:
-        estado.ia = _cargar_ia()
+        _cargar_ia(estado)
     _preparar_base_de_datos(app, estado)
     app.extensions["capricho"] = estado
 
@@ -54,16 +54,22 @@ def create_app(config=None):
     return app
 
 
-def _cargar_ia():
-    try:
-        from .ia.modelo import cargar
-        detector_ia = cargar()
-    except Exception as error:            # sin Keras o modelo dañado: se sigue solo con reglas
-        logger.warning("IA desactivada: %s", error)
-        return None
-    if detector_ia is None:
-        logger.warning("IA desactivada: no hay modelo entrenado (python herramientas/entrenar_ia.py)")
-    return detector_ia
+def _cargar_ia(estado):
+    """Carga cada modelo por separado: si uno falta o falla, el sistema sigue
+    con los demás y con las reglas."""
+    import importlib
+
+    for atributo, modulo in (("ia", "modelo"), ("clasificador", "clasificador"), ("monto", "monto"),
+                             ("demanda", "demanda")):
+        try:
+            modelo = importlib.import_module(f".ia.{modulo}", __name__).cargar()
+        except Exception as error:            # sin Keras o modelo dañado
+            logger.warning("IA (%s) desactivada: %s", modulo, error)
+            continue
+        if modelo is None:
+            logger.warning("IA (%s) desactivada: no hay modelo entrenado (python herramientas/entrenar_modelos.py)",
+                           modulo)
+        setattr(estado, atributo, modelo)
 
 
 def _preparar_base_de_datos(app, estado):

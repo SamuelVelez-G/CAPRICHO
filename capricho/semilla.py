@@ -183,7 +183,8 @@ class _Historia:
         self.rng = random.Random(42)
         self.momento_actual = ahora()
         self.hoy = self.momento_actual.replace(hour=0, minute=0, second=0, microsecond=0)
-        self.creado = a_texto(self.hoy - timedelta(days=90))
+        self.dias = config.get("DIAS_DE_HISTORIA", DIAS_DE_HISTORIA)
+        self.creado = a_texto(self.hoy - timedelta(days=max(90, self.dias + 7)))
         self.comprobantes_usados = []
         self.productos = catalogo.listar(db)
         self.por_tipo = {t: [p for p in self.productos if p["tipo"] == t] for t in ("GRANIZADO", "ADICION", "OTRO")}
@@ -261,7 +262,7 @@ class _Historia:
     def eventos(self):
         rng = self.rng
         eventos = []
-        for dias_atras in range(DIAS_DE_HISTORIA - 1, -1, -1):
+        for dias_atras in range(self.dias - 1, -1, -1):
             dia = self.hoy - timedelta(days=dias_atras)
             fin = dia.weekday() >= 5
             if dia.weekday() == 0:

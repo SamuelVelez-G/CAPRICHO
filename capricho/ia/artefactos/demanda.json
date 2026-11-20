@@ -1,0 +1,266 @@
+{
+ "creado": "2026-11-20T14:32:57",
+ "variables": [
+  "lunes",
+  "martes",
+  "miercoles",
+  "jueves",
+  "viernes",
+  "sabado",
+  "domingo",
+  "ayer",
+  "semana_pasada",
+  "promedio_7"
+ ],
+ "parametros": 342,
+ "dias": 181,
+ "prueba_dias": 28,
+ "error_promedio": {
+  "red": 87261,
+  "regresion_lineal": 103512,
+  "semana_pasada": 101750
+ },
+ "venta_promedio": 702707,
+ "prueba": [
+  {
+   "dia": "2026-10-23",
+   "real": 842700,
+   "red": 733833,
+   "regresion_lineal": 713830,
+   "semana_pasada": 765000
+  },
+  {
+   "dia": "2026-10-24",
+   "real": 818800,
+   "red": 918791,
+   "regresion_lineal": 714005,
+   "semana_pasada": 921300
+  },
+  {
+   "dia": "2026-10-25",
+   "real": 871100,
+   "red": 797311,
+   "regresion_lineal": 714180,
+   "semana_pasada": 754200
+  },
+  {
+   "dia": "2026-10-26",
+   "real": 643500,
+   "red": 597706,
+   "regresion_lineal": 714355,
+   "semana_pasada": 433300
+  },
+  {
+   "dia": "2026-10-27",
+   "real": 599800,
+   "red": 605452,
+   "regresion_lineal": 714530,
+   "semana_pasada": 697900
+  },
+  {
+   "dia": "2026-10-28",
+   "real": 529400,
+   "red": 614942,
+   "regresion_lineal": 714705,
+   "semana_pasada": 574000
+  },
+  {
+   "dia": "2026-10-29",
+   "real": 589900,
+   "red": 734000,
+   "regresion_lineal": 714880,
+   "semana_pasada": 502300
+  },
+  {
+   "dia": "2026-10-30",
+   "real": 726600,
+   "red": 690735,
+   "regresion_lineal": 715055,
+   "semana_pasada": 842700
+  },
+  {
+   "dia": "2026-10-31",
+   "real": 1011300,
+   "red": 928482,
+   "regresion_lineal": 715230,
+   "semana_pasada": 818800
+  },
+  {
+   "dia": "2026-11-01",
+   "real": 863000,
+   "red": 881332,
+   "regresion_lineal": 715405,
+   "semana_pasada": 871100
+  },
+  {
+   "dia": "2026-11-02",
+   "real": 640400,
+   "red": 660371,
+   "regresion_lineal": 715580,
+   "semana_pasada": 643500
+  },
+  {
+   "dia": "2026-11-03",
+   "real": 665000,
+   "red": 617529,
+   "regresion_lineal": 715755,
+   "semana_pasada": 599800
+  },
+  {
+   "dia": "2026-11-04",
+   "real": 635500,
+   "red": 671194,
+   "regresion_lineal": 715930,
+   "semana_pasada": 529400
+  },
+  {
+   "dia": "2026-11-05",
+   "real": 689000,
+   "red": 704592,
+   "regresion_lineal": 716105,
+   "semana_pasada": 589900
+  },
+  {
+   "dia": "2026-11-06",
+   "real": 690600,
+   "red": 689070,
+   "regresion_lineal": 716280,
+   "semana_pasada": 726600
+  },
+  {
+   "dia": "2026-11-07",
+   "real": 894400,
+   "red": 933845,
+   "regresion_lineal": 716455,
+   "semana_pasada": 1011300
+  },
+  {
+   "dia": "2026-11-08",
+   "real": 715500,
+   "red": 865649,
+   "regresion_lineal": 716630,
+   "semana_pasada": 863000
+  },
+  {
+   "dia": "2026-11-09",
+   "real": 654900,
+   "red": 506555,
+   "regresion_lineal": 716806,
+   "semana_pasada": 640400
+  },
+  {
+   "dia": "2026-11-10",
+   "real": 690700,
+   "red": 600917,
+   "regresion_lineal": 716981,
+   "semana_pasada": 665000
+  },
+  {
+   "dia": "2026-11-11",
+   "real": 628100,
+   "red": 674304,
+   "regresion_lineal": 717156,
+   "semana_pasada": 635500
+  },
+  {
+   "dia": "2026-11-12",
+   "real": 770400,
+   "red": 632765,
+   "regresion_lineal": 717331,
+   "semana_pasada": 689000
+  },
+  {
+   "dia": "2026-11-13",
+   "real": 618300,
+   "red": 652921,
+   "regresion_lineal": 717506,
+   "semana_pasada": 690600
+  },
+  {
+   "dia": "2026-11-14",
+   "real": 651400,
+   "red": 858888,
+   "regresion_lineal": 717681,
+   "semana_pasada": 894400
+  },
+  {
+   "dia": "2026-11-15",
+   "real": 761100,
+   "red": 842043,
+   "regresion_lineal": 717856,
+   "semana_pasada": 715500
+  },
+  {
+   "dia": "2026-11-16",
+   "real": 648500,
+   "red": 539514,
+   "regresion_lineal": 718031,
+   "semana_pasada": 654900
+  },
+  {
+   "dia": "2026-11-17",
+   "real": 476400,
+   "red": 589722,
+   "regresion_lineal": 718206,
+   "semana_pasada": 690700
+  },
+  {
+   "dia": "2026-11-18",
+   "real": 858700,
+   "red": 594347,
+   "regresion_lineal": 718381,
+   "semana_pasada": 628100
+  },
+  {
+   "dia": "2026-11-19",
+   "real": 490800,
+   "red": 691823,
+   "regresion_lineal": 718556,
+   "semana_pasada": 770400
+  }
+ ],
+ "historia": {
+  "loss": [
+   0.18714,
+   0.02751,
+   0.0201,
+   0.01823,
+   0.01761,
+   0.01748,
+   0.01649,
+   0.01637,
+   0.01622,
+   0.01606,
+   0.016,
+   0.01531,
+   0.01559,
+   0.01538,
+   0.01546,
+   0.01527,
+   0.01526,
+   0.01541,
+   0.01468,
+   0.01492,
+   0.01516,
+   0.01503,
+   0.01479,
+   0.01475,
+   0.01454,
+   0.01463,
+   0.01454,
+   0.01451,
+   0.01473,
+   0.01449,
+   0.01425,
+   0.01433,
+   0.01459,
+   0.0146,
+   0.01457,
+   0.01444,
+   0.01425,
+   0.01408,
+   0.01459,
+   0.01422
+  ]
+ }
+}

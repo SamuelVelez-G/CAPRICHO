@@ -12,7 +12,11 @@ Por cada transacción que llega:
            ¿5 o más en menos de 1 segundo?     sí -> RECHAZADA  (RAFAGA, crítico)
            ¿umbral o más dentro de la ventana? sí -> SOSPECHOSA (POSIBLE_FRAUDE)
       -> ¿monto por encima del límite?         sí -> SOSPECHOSA (MONTO_ATIPICO)
-      -> registrar transacción y anomalías
+      -> estadística: ¿el monto se sale de los cuartiles del cliente?   (o de la población si es nuevo)
+      -> clasificador de Keras: probabilidad de fraude (aprende de TODOS los clientes)
+      -> regresión de Keras: monto esperado
+      -> autoencoder de Keras: ¿se parece a los hábitos de ESE cliente?
+      -> registrar transacción, anomalías y el análisis completo (lo muestra el monitor en vivo)
 
 Cada usuario tiene su propia ventana: nunca se mezclan (caso de uso 3).
 """
@@ -21,6 +25,7 @@ import bisect
 import copy
 import json
 import secrets
+import time as reloj
 from datetime import time, timedelta
 
 from ..errores import ErrorReplay, ErrorValidacion
@@ -29,8 +34,8 @@ from ..registro import logger
 from ..seguridad import firmar_transaccion, verificar_hash
 from ..tiempo import a_texto, ahora, desde_texto
 from ..validaciones import validar_transaccion
-from ..ia import caracteristicas
-from . import usuarios
+from ..ia import caracteristicas, operaciones
+from . import estadistica, usuarios
 
 # Diapositiva 38 ("venta" es "ventana": lo confirmó el profesor): la ventana
 # depende de la hora de la transacción. Mañana 10 s, tarde-noche 6 s y
@@ -67,6 +72,8 @@ TIPOS_ANOMALIA = {
     "MONTO_ATIPICO": "Monto fuera de lo normal",
     "PRECIO_MANIPULADO": "Precio alterado desde el navegador",
     "COMPORTAMIENTO_INUSUAL": "IA: compra que no se parece a los hábitos del cliente",
+    "FRAUDE_CLASIFICADOR": "IA: el clasificador la considera fraudulenta",
+    "MONTO_FUERA_DE_CUARTILES": "Estadística: monto fuera de los cuartiles del cliente",
 }
 NIVELES = ("BAJO", "MEDIO", "ALTO", "CRITICO")
 
@@ -219,11 +226,17 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None, cana
                 {"idTxn": "Ya existe"},
             )
 
+        inicio = reloj.perf_counter()
         reglas = cargar_reglas(db)
         regla = regla_aplicable(reglas, txn["fecha"])
         usuario_id = usuarios.obtener_o_crear_por_email(db, estado, txn["email"], llegada)
+        # El consumidor final de la caja no tiene historial propio: -1 no coincide
+        # con ningún usuario, así que se evalúa como cliente nuevo.
+        anonimo = txn["email"] == usuarios.CONSUMIDOR_FINAL
+        historial_de = -1 if anonimo else usuario_id
         anomalias = []
         analisis = {
+            "anonimo": anonimo,
             "hash_valido": bool(txn["hash_valido"]),
             "firma": txn.get("firma", "firmada por la tienda"),
             "regla": regla["nombre"],
@@ -234,10 +247,10 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None, cana
         # Todas las transacciones cuentan en la ventana, también las de hash
         # inválido: el intento ocurrió aunque los datos vengan alterados.
         rafaga = reglas["rafaga"]
-        por_fecha = contar_en_ventana(db, usuario_id, txn["fecha"], rafaga["ventana_segundos"])
-        por_llegada = (contar_llegadas(db, usuario_id, llegada, rafaga["ventana_segundos"])
+        por_fecha = contar_en_ventana(db, historial_de, txn["fecha"], rafaga["ventana_segundos"])
+        por_llegada = (contar_llegadas(db, historial_de, llegada, rafaga["ventana_segundos"])
                        if contar_llegada and rafaga.get("por_llegada", False) else 1)
-        en_ventana = contar_en_ventana(db, usuario_id, txn["fecha"], regla["ventana_segundos"])
+        en_ventana = contar_en_ventana(db, historial_de, txn["fecha"], regla["ventana_segundos"])
         analisis.update({
             "transacciones_en_ventana": en_ventana,
             "rafaga_maximo": rafaga["maximo"],
@@ -280,25 +293,73 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None, cana
             if estado_txn == "APROBADA":
                 estado_txn = "SOSPECHOSA"
 
-        # La IA (autoencoder de Keras) mira lo que las reglas no: si la compra
-        # se parece a los hábitos del cliente. Se evalúa con su historial ANTES
-        # de guardar esta transacción.
+        tiempos = {"reglas": round((reloj.perf_counter() - inicio) * 1000, 2)}
         modo_ia = reglas.get("ia_modo", "marcar")
-        if estado.ia is not None and modo_ia != "apagada":
-            x, contexto = caracteristicas.desde_historial(db, usuario_id, txn["fecha"], txn["valor"],
-                                                          txn["metodo_pago"])
-            veredicto = estado.ia.evaluar(x, contexto)
-            txn["riesgo_ia"] = veredicto["riesgo"]
-            analisis["ia"] = {**veredicto, "modo": modo_ia}
-            if veredicto["anomalia"] and modo_ia == "marcar":
-                principal = veredicto["variables"][0]
-                anomalias.append(_anomalia(
-                    "COMPORTAMIENTO_INUSUAL", veredicto["nivel"], 1, 0,
-                    f"Riesgo IA {veredicto['riesgo']:.0f}/100. Lo más inusual: {principal['explicacion']}",
-                ))
-                if estado_txn == "APROBADA":
-                    estado_txn = "SOSPECHOSA"
+        marcar = modo_ia == "marcar"
 
+        # Estadística simple: ¿el monto cabe en los cuartiles de ESTE cliente?
+        # Si es nuevo se compara con toda la población, pero solo como dato: con
+        # un cliente nuevo decide el clasificador, que aprendió de todos.
+        paso = reloj.perf_counter()
+        perfil_monto = estadistica.evaluar_transaccion(db, historial_de, txn["valor"], txn["fecha"])
+        analisis["estadistica"] = perfil_monto
+        tiempos["estadistica"] = round((reloj.perf_counter() - paso) * 1000, 2)
+        if perfil_monto["alerta"] == "ALTA" and perfil_monto["referencia"] == "personal" and marcar:
+            p_ = perfil_monto["perfil"]
+            anomalias.append(_anomalia(
+                "MONTO_FUERA_DE_CUARTILES", "MEDIO", 1, 0,
+                f"{dinero(txn['valor'])} supera la cerca extrema Q3 + 3·IQR = {dinero(p_['cerca_extrema'])} del perfil "
+                f"{perfil_monto['referencia']} (Q1 {dinero(p_['q1'])}, Q3 {dinero(p_['q3'])}); z = {perfil_monto['z']}",
+            ))
+            if estado_txn == "APROBADA":
+                estado_txn = "SOSPECHOSA"
+
+        if modo_ia != "apagada":
+            # Clasificador de Keras: aprendió de toda la población, así que
+            # también decide con clientes nuevos.
+            if estado.clasificador is not None:
+                paso = reloj.perf_counter()
+                x, contexto = operaciones.desde_db(db, historial_de, txn["fecha"], txn["valor"], txn["metodo_pago"],
+                                                   txn["hash_valido"], estado.clasificador.mediana_poblacion)
+                veredicto = estado.clasificador.evaluar(x, contexto)
+                txn["prob_fraude"] = veredicto["probabilidad"]
+                txn["clasificacion"] = veredicto["clasificacion"]
+                analisis["clasificador"] = {**veredicto, "modo": modo_ia}
+                if estado.monto is not None:
+                    analisis["monto_esperado"] = estado.monto.evaluar(contexto)
+                tiempos["clasificador"] = round((reloj.perf_counter() - paso) * 1000, 2)
+                if veredicto["fraudulenta"] and marcar:
+                    principales = "; ".join([f["explicacion"] for f in veredicto["factores"] if f["aporte"] > 0][:2])
+                    anomalias.append(_anomalia(
+                        "FRAUDE_CLASIFICADOR", veredicto["nivel"], 1, 0,
+                        f"Probabilidad de fraude {veredicto['porcentaje']:.0f} % ({veredicto['segmento']}, "
+                        f"conocimiento general {veredicto['conocimiento']['general']:.0f} %). Pesó más: {principales}",
+                    ))
+                    if estado_txn == "APROBADA":
+                        estado_txn = "SOSPECHOSA"
+
+            # Autoencoder: ¿se parece a los hábitos de ESTE cliente?
+            if estado.ia is not None:
+                paso = reloj.perf_counter()
+                x, contexto = caracteristicas.desde_historial(db, historial_de, txn["fecha"], txn["valor"],
+                                                              txn["metodo_pago"])
+                veredicto = estado.ia.evaluar(x, contexto)
+                txn["riesgo_ia"] = veredicto["riesgo"]
+                analisis["ia"] = {**veredicto, "modo": modo_ia}
+                tiempos["autoencoder"] = round((reloj.perf_counter() - paso) * 1000, 2)
+                if veredicto["anomalia"] and marcar:
+                    principal = veredicto["variables"][0]
+                    anomalias.append(_anomalia(
+                        "COMPORTAMIENTO_INUSUAL", veredicto["nivel"], 1, 0,
+                        f"Riesgo IA {veredicto['riesgo']:.0f}/100. Lo más inusual: {principal['explicacion']}",
+                    ))
+                    if estado_txn == "APROBADA":
+                        estado_txn = "SOSPECHOSA"
+
+        tiempos["total"] = round((reloj.perf_counter() - inicio) * 1000, 2)
+        analisis["tiempos_ms"] = tiempos
+        analisis["decision"] = {"estado": estado_txn, "resultado": "ANOMALIA" if anomalias else "NORMAL",
+                                "motivos": [a["tipo"] for a in anomalias]}
         transaccion_id = _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, llegada,
                                   canal, analisis)
         if confirmar:

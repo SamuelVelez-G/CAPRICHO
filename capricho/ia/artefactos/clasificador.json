@@ -1,0 +1,941 @@
+{
+ "creado": "2026-11-20T14:32:24",
+ "motor": "tensorflow",
+ "versiones": {
+  "tensorflow": "2.21.0",
+  "keras": "3.15.1"
+ },
+ "variables": [
+  "hora_seno",
+  "hora_coseno",
+  "fin_de_semana",
+  "monto_log",
+  "monto_vs_poblacion",
+  "metodo_nequi",
+  "metodo_tarjeta",
+  "metodo_daviplata",
+  "metodo_pse",
+  "metodo_efectivo",
+  "metodo_otro",
+  "firma_valida",
+  "compras_1min",
+  "compras_1h",
+  "compras_24h",
+  "metodos_24h",
+  "horas_desde_anterior",
+  "historial",
+  "es_nuevo",
+  "monto_vs_habitual",
+  "metodo_habitual",
+  "hora_vs_habitual",
+  "monto_z"
+ ],
+ "grupos": {
+  "hora": [
+   0,
+   1
+  ],
+  "dia": [
+   2
+  ],
+  "monto": [
+   3,
+   4
+  ],
+  "metodo": [
+   5,
+   6,
+   7,
+   8,
+   9,
+   10
+  ],
+  "firma": [
+   11
+  ],
+  "frecuencia": [
+   12,
+   13,
+   14,
+   15
+  ],
+  "recencia": [
+   16
+  ],
+  "antiguedad": [
+   17,
+   18
+  ],
+  "monto_habitual": [
+   19,
+   22
+  ],
+  "metodo_habitual": [
+   20
+  ],
+  "hora_habitual": [
+   21
+  ]
+ },
+ "personales": [
+  "monto_habitual",
+  "metodo_habitual",
+  "hora_habitual"
+ ],
+ "arquitectura": [
+  {
+   "capa": "normalizacion",
+   "tipo": "Normalization",
+   "unidades": null,
+   "activacion": null,
+   "tasa": null
+  },
+  {
+   "capa": "oculta_1",
+   "tipo": "Dense",
+   "unidades": 64,
+   "activacion": "relu",
+   "tasa": null
+  },
+  {
+   "capa": "apagado_1",
+   "tipo": "Dropout",
+   "unidades": null,
+   "activacion": null,
+   "tasa": 0.2
+  },
+  {
+   "capa": "oculta_2",
+   "tipo": "Dense",
+   "unidades": 32,
+   "activacion": "relu",
+   "tasa": null
+  },
+  {
+   "capa": "apagado_2",
+   "tipo": "Dropout",
+   "unidades": null,
+   "activacion": null,
+   "tasa": 0.1
+  },
+  {
+   "capa": "probabilidad_fraude",
+   "tipo": "Dense",
+   "unidades": 1,
+   "activacion": "sigmoid",
+   "tasa": null
+  }
+ ],
+ "parametros": 3696,
+ "umbral": 0.9880436021359119,
+ "mediana_poblacion": 16000.0,
+ "referencia": [
+  -0.4255818724632263,
+  -0.5409438610076904,
+  0.0,
+  4.20412015914917,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  1.0,
+  0.0,
+  0.0,
+  0.0,
+  0.25,
+  1.403743028640747,
+  3.044522523880005,
+  0.0,
+  0.0,
+  0.7352941036224365,
+  0.1192699521780014,
+  -0.042466066777706146
+ ],
+ "datos": {
+  "total": 38436,
+  "fraudes": 807,
+  "entrenamiento": 23963,
+  "validacion": 6739,
+  "prueba": 7734,
+  "clientes": 800,
+  "dias": 90,
+  "division": "días 0-62 entrenamiento, 63-75 validación, 76-89 prueba"
+ },
+ "historia": {
+  "loss": [
+   0.29,
+   0.0768,
+   0.0523,
+   0.0415,
+   0.0355,
+   0.0316,
+   0.028,
+   0.027,
+   0.0245,
+   0.021,
+   0.0207,
+   0.0196,
+   0.0182,
+   0.0178,
+   0.0175,
+   0.0162,
+   0.015,
+   0.0147,
+   0.0134,
+   0.0147
+  ],
+  "val_loss": [
+   0.0411,
+   0.0148,
+   0.0107,
+   0.0084,
+   0.0082,
+   0.0072,
+   0.007,
+   0.0071,
+   0.0067,
+   0.0071,
+   0.0068,
+   0.0067,
+   0.0067,
+   0.0061,
+   0.0061,
+   0.0069,
+   0.0064,
+   0.0068,
+   0.0063,
+   0.0065
+  ],
+  "auc_pr": [
+   0.9088,
+   0.9885,
+   0.9927,
+   0.9949,
+   0.9957,
+   0.9967,
+   0.9973,
+   0.9975,
+   0.9979,
+   0.9984,
+   0.9987,
+   0.9987,
+   0.9988,
+   0.9991,
+   0.9989,
+   0.9992,
+   0.9994,
+   0.9995,
+   0.9994,
+   0.9995
+  ],
+  "val_auc_pr": [
+   0.9412,
+   0.9753,
+   0.978,
+   0.9782,
+   0.9797,
+   0.9803,
+   0.9802,
+   0.9807,
+   0.9818,
+   0.9829,
+   0.9831,
+   0.9835,
+   0.9824,
+   0.9835,
+   0.983,
+   0.983,
+   0.9827,
+   0.9824,
+   0.9835,
+   0.9828
+  ]
+ },
+ "aumento": {
+  "sin_aumento": {
+   "umbral": 0.9780482138101779,
+   "prueba": {
+    "exactitud": 0.9987,
+    "precision": 0.9848,
+    "recall": 0.8784,
+    "f1": 0.9286,
+    "falsas_alarmas": 0.0001,
+    "matriz": {
+     "verdaderos_positivos": 65,
+     "falsos_positivos": 1,
+     "falsos_negativos": 9,
+     "verdaderos_negativos": 7659
+    }
+   },
+   "auc_roc": 0.9991,
+   "auc_pr": 0.9732,
+   "epocas": 17,
+   "segundos": 5.7
+  },
+  "con_aumento": {
+   "umbral": 0.9880436021359119,
+   "prueba": {
+    "exactitud": 0.9991,
+    "precision": 1.0,
+    "recall": 0.9054,
+    "f1": 0.9504,
+    "falsas_alarmas": 0.0,
+    "matriz": {
+     "verdaderos_positivos": 67,
+     "falsos_positivos": 0,
+     "falsos_negativos": 7,
+     "verdaderos_negativos": 7660
+    }
+   },
+   "auc_roc": 0.9984,
+   "auc_pr": 0.9766,
+   "epocas": 20,
+   "segundos": 9.4
+  }
+ },
+ "prueba": {
+  "exactitud": 0.9991,
+  "precision": 1.0,
+  "recall": 0.9054,
+  "f1": 0.9504,
+  "falsas_alarmas": 0.0,
+  "matriz": {
+   "verdaderos_positivos": 67,
+   "falsos_positivos": 0,
+   "falsos_negativos": 7,
+   "verdaderos_negativos": 7660
+  }
+ },
+ "auc_roc": 0.9984,
+ "auc_pr": 0.9766,
+ "comparacion": {
+  "clasificador": {
+   "todos": {
+    "operaciones": 7734,
+    "fraudes": 74,
+    "precision": 1.0,
+    "recall": 0.9054,
+    "f1": 0.9504,
+    "falsas_alarmas": 0.0
+   },
+   "clientes_nuevos": {
+    "operaciones": 188,
+    "fraudes": 27,
+    "precision": 1.0,
+    "recall": 0.8519,
+    "f1": 0.92,
+    "falsas_alarmas": 0.0
+   },
+   "con_historial": {
+    "operaciones": 7546,
+    "fraudes": 47,
+    "precision": 1.0,
+    "recall": 0.9362,
+    "f1": 0.967,
+    "falsas_alarmas": 0.0
+   }
+  },
+  "reglas": {
+   "todos": {
+    "operaciones": 7734,
+    "fraudes": 74,
+    "precision": 1.0,
+    "recall": 0.527,
+    "f1": 0.6903,
+    "falsas_alarmas": 0.0
+   },
+   "clientes_nuevos": {
+    "operaciones": 188,
+    "fraudes": 27,
+    "precision": 1.0,
+    "recall": 0.5556,
+    "f1": 0.7143,
+    "falsas_alarmas": 0.0
+   },
+   "con_historial": {
+    "operaciones": 7546,
+    "fraudes": 47,
+    "precision": 1.0,
+    "recall": 0.5106,
+    "f1": 0.6761,
+    "falsas_alarmas": 0.0
+   }
+  },
+  "autoencoder": {
+   "todos": {
+    "operaciones": 7734,
+    "fraudes": 74,
+    "precision": 0.1519,
+    "recall": 0.7162,
+    "f1": 0.2506,
+    "falsas_alarmas": 0.0386
+   },
+   "clientes_nuevos": {
+    "operaciones": 188,
+    "fraudes": 27,
+    "precision": 0.7333,
+    "recall": 0.8148,
+    "f1": 0.7719,
+    "falsas_alarmas": 0.0497
+   },
+   "con_historial": {
+    "operaciones": 7546,
+    "fraudes": 47,
+    "precision": 0.0972,
+    "recall": 0.6596,
+    "f1": 0.1694,
+    "falsas_alarmas": 0.0384
+   }
+  },
+  "reglas_y_clasificador": {
+   "todos": {
+    "operaciones": 7734,
+    "fraudes": 74,
+    "precision": 1.0,
+    "recall": 0.9189,
+    "f1": 0.9577,
+    "falsas_alarmas": 0.0
+   },
+   "clientes_nuevos": {
+    "operaciones": 188,
+    "fraudes": 27,
+    "precision": 1.0,
+    "recall": 0.8519,
+    "f1": 0.92,
+    "falsas_alarmas": 0.0
+   },
+   "con_historial": {
+    "operaciones": 7546,
+    "fraudes": 47,
+    "precision": 1.0,
+    "recall": 0.9574,
+    "f1": 0.9783,
+    "falsas_alarmas": 0.0
+   }
+  }
+ },
+ "por_tipo": {
+  "cuenta_tomada": {
+   "operaciones": 23,
+   "fraude": true,
+   "descripcion": "Cuenta tomada: monto muy alto para ese cliente, otro método y a deshoras",
+   "clasificador": 0.913,
+   "reglas": 0.3478,
+   "autoencoder": 1.0,
+   "reglas_y_clasificador": 0.9565
+  },
+  "cliente_nuevo": {
+   "operaciones": 15,
+   "fraude": true,
+   "descripcion": "Cuenta nueva con un monto alto a deshoras",
+   "clasificador": 1.0,
+   "reglas": 0.9333,
+   "autoencoder": 1.0,
+   "reglas_y_clasificador": 1.0
+  },
+  "prueba_tarjeta": {
+   "operaciones": 4,
+   "fraude": true,
+   "descripcion": "Prueba de tarjeta: varios montos pequeños en minutos",
+   "clasificador": 1.0,
+   "reglas": 0.0,
+   "autoencoder": 1.0,
+   "reglas_y_clasificador": 1.0
+  },
+  "mula": {
+   "operaciones": 11,
+   "fraude": true,
+   "descripcion": "Cuenta nueva que paga varias veces con métodos distintos en una hora",
+   "clasificador": 0.7273,
+   "reglas": 0.0,
+   "autoencoder": 0.8182,
+   "reglas_y_clasificador": 0.7273
+  },
+  "rafaga": {
+   "operaciones": 10,
+   "fraude": true,
+   "descripcion": "Ráfaga: 5 o más en menos de un segundo",
+   "clasificador": 0.8,
+   "reglas": 0.6,
+   "autoencoder": 0.1,
+   "reglas_y_clasificador": 0.8
+  },
+  "firma_invalida": {
+   "operaciones": 10,
+   "fraude": true,
+   "descripcion": "Firma (hash) que no coincide con los datos",
+   "clasificador": 1.0,
+   "reglas": 1.0,
+   "autoencoder": 0.0,
+   "reglas_y_clasificador": 1.0
+  },
+  "monto_extremo": {
+   "operaciones": 1,
+   "fraude": true,
+   "descripcion": "Monto extremo (más de $1.000.000)",
+   "clasificador": 1.0,
+   "reglas": 1.0,
+   "autoencoder": 1.0,
+   "reglas_y_clasificador": 1.0
+  },
+  "normal": {
+   "operaciones": 6021,
+   "fraude": false,
+   "descripcion": "Compra normal",
+   "clasificador": 0.0,
+   "reglas": 0.0,
+   "autoencoder": 0.0216,
+   "reglas_y_clasificador": 0.0
+  },
+  "nuevo_legitimo": {
+   "operaciones": 125,
+   "fraude": false,
+   "descripcion": "Cliente nuevo que compra normal",
+   "clasificador": 0.0,
+   "reglas": 0.0,
+   "autoencoder": 0.04,
+   "reglas_y_clasificador": 0.0
+  },
+  "pedido_grande": {
+   "operaciones": 81,
+   "fraude": false,
+   "descripcion": "Pedido grande legítimo (familia u oficina)",
+   "clasificador": 0.0,
+   "reglas": 0.0,
+   "autoencoder": 0.8025,
+   "reglas_y_clasificador": 0.0
+  },
+  "cambio_habito": {
+   "operaciones": 127,
+   "fraude": false,
+   "descripcion": "Cliente que cambió un hábito",
+   "clasificador": 0.0,
+   "reglas": 0.0,
+   "autoencoder": 0.0472,
+   "reglas_y_clasificador": 0.0
+  },
+  "repite_el_dia": {
+   "operaciones": 1306,
+   "fraude": false,
+   "descripcion": "Cliente que vuelve a comprar el mismo día",
+   "clasificador": 0.0,
+   "reglas": 0.0,
+   "autoencoder": 0.0689,
+   "reglas_y_clasificador": 0.0
+  }
+ },
+ "curva_pr": [
+  {
+   "umbral": 0.0,
+   "precision": 0.0239,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0245,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0252,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0259,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0266,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0274,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0283,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0291,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0301,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0311,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0321,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0333,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0345,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0358,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0373,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0,
+   "precision": 0.0388,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0001,
+   "precision": 0.0405,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0001,
+   "precision": 0.0423,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0001,
+   "precision": 0.0443,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0001,
+   "precision": 0.0465,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0001,
+   "precision": 0.049,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0001,
+   "precision": 0.0517,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0002,
+   "precision": 0.0547,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0002,
+   "precision": 0.0581,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0002,
+   "precision": 0.0619,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0003,
+   "precision": 0.0663,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0004,
+   "precision": 0.0714,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0005,
+   "precision": 0.0772,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0006,
+   "precision": 0.0843,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0008,
+   "precision": 0.0926,
+   "recall": 1.0
+  },
+  {
+   "umbral": 0.0012,
+   "precision": 0.1014,
+   "recall": 0.9865
+  },
+  {
+   "umbral": 0.0017,
+   "precision": 0.1139,
+   "recall": 0.9865
+  },
+  {
+   "umbral": 0.0025,
+   "precision": 0.1299,
+   "recall": 0.9865
+  },
+  {
+   "umbral": 0.0037,
+   "precision": 0.1511,
+   "recall": 0.9865
+  },
+  {
+   "umbral": 0.0054,
+   "precision": 0.1807,
+   "recall": 0.9865
+  },
+  {
+   "umbral": 0.008,
+   "precision": 0.2246,
+   "recall": 0.9865
+  },
+  {
+   "umbral": 0.0143,
+   "precision": 0.2927,
+   "recall": 0.973
+  },
+  {
+   "umbral": 0.0378,
+   "precision": 0.4337,
+   "recall": 0.973
+  },
+  {
+   "umbral": 0.3688,
+   "precision": 0.8276,
+   "recall": 0.973
+  },
+  {
+   "umbral": 1.0,
+   "precision": 1.0,
+   "recall": 0.2297
+  }
+ ],
+ "histograma": {
+  "bordes": [
+   0.0,
+   0.05,
+   0.1,
+   0.15000000000000002,
+   0.2,
+   0.25,
+   0.30000000000000004,
+   0.35000000000000003,
+   0.4,
+   0.45,
+   0.5,
+   0.55,
+   0.6000000000000001,
+   0.65,
+   0.7000000000000001,
+   0.75,
+   0.8,
+   0.8500000000000001,
+   0.9,
+   0.9500000000000001,
+   1.0
+  ],
+  "normales": [
+   7581,
+   34,
+   13,
+   4,
+   5,
+   4,
+   3,
+   2,
+   2,
+   0,
+   2,
+   4,
+   2,
+   1,
+   1,
+   0,
+   1,
+   0,
+   0,
+   1
+  ],
+  "fraudes": [
+   2,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   68
+  ]
+ },
+ "verificacion_numpy": 2.52636619957336e-07,
+ "inferencia": {
+  "keras_ms": 3.1139,
+  "numpy_ms": 0.0192,
+  "veces": 162.3
+ },
+ "ejemplos": [
+  {
+   "tipo": "cuenta_tomada",
+   "fraude": true,
+   "nuevo": false,
+   "probabilidad": 1.0,
+   "detectado": true,
+   "valor": 325000.0,
+   "metodo": "PSE",
+   "hora": "00:57",
+   "historial": 21
+  },
+  {
+   "tipo": "normal",
+   "fraude": false,
+   "nuevo": false,
+   "probabilidad": 0.0,
+   "detectado": false,
+   "valor": 16000.0,
+   "metodo": "Tarjeta",
+   "hora": "05:00",
+   "historial": 15
+  },
+  {
+   "tipo": "repite_el_dia",
+   "fraude": false,
+   "nuevo": false,
+   "probabilidad": 0.001,
+   "detectado": false,
+   "valor": 16000.0,
+   "metodo": "Daviplata",
+   "hora": "05:06",
+   "historial": 19
+  },
+  {
+   "tipo": "nuevo_legitimo",
+   "fraude": false,
+   "nuevo": false,
+   "probabilidad": 0.0,
+   "detectado": false,
+   "valor": 24000.0,
+   "metodo": "PSE",
+   "hora": "07:00",
+   "historial": 3
+  },
+  {
+   "tipo": "cambio_habito",
+   "fraude": false,
+   "nuevo": false,
+   "probabilidad": 0.03,
+   "detectado": false,
+   "valor": 27000.0,
+   "metodo": "Efectivo",
+   "hora": "07:10",
+   "historial": 72
+  },
+  {
+   "tipo": "pedido_grande",
+   "fraude": false,
+   "nuevo": false,
+   "probabilidad": 0.0,
+   "detectado": false,
+   "valor": 87000.0,
+   "metodo": "Nequi",
+   "hora": "10:30",
+   "historial": 54
+  },
+  {
+   "tipo": "rafaga",
+   "fraude": true,
+   "nuevo": false,
+   "probabilidad": 0.001,
+   "detectado": false,
+   "valor": 16000.0,
+   "metodo": "PSE",
+   "hora": "21:14",
+   "historial": 25
+  },
+  {
+   "tipo": "cliente_nuevo",
+   "fraude": true,
+   "nuevo": true,
+   "probabilidad": 1.0,
+   "detectado": true,
+   "valor": 766000.0,
+   "metodo": "Tarjeta",
+   "hora": "22:06",
+   "historial": 0
+  },
+  {
+   "tipo": "firma_invalida",
+   "fraude": true,
+   "nuevo": false,
+   "probabilidad": 1.0,
+   "detectado": true,
+   "valor": 18000.0,
+   "metodo": "Efectivo",
+   "hora": "12:59",
+   "historial": 40
+  },
+  {
+   "tipo": "monto_extremo",
+   "fraude": true,
+   "nuevo": false,
+   "probabilidad": 1.0,
+   "detectado": true,
+   "valor": 4560000.0,
+   "metodo": "Nequi",
+   "hora": "11:51",
+   "historial": 48
+  },
+  {
+   "tipo": "prueba_tarjeta",
+   "fraude": true,
+   "nuevo": false,
+   "probabilidad": 1.0,
+   "detectado": true,
+   "valor": 1500.0,
+   "metodo": "Tarjeta",
+   "hora": "01:51",
+   "historial": 61
+  },
+  {
+   "tipo": "mula",
+   "fraude": true,
+   "nuevo": true,
+   "probabilidad": 0.782,
+   "detectado": false,
+   "valor": 90000.0,
+   "metodo": "Daviplata",
+   "hora": "21:26",
+   "historial": 0
+  }
+ ]
+}

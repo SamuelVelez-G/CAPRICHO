@@ -13,19 +13,17 @@ Con una compra normal la reconstrucción sale casi igual (error bajo). Con una
 compra rara la red no sabe reconstruirla porque nunca vio algo así (error
 alto). Ese error de reconstrucción es el puntaje de rareza.
 
-Keras 3 funciona sobre varios motores. TensorFlow todavía no tiene versión
-para Python 3.14, así que se usa PyTorch (KERAS_BACKEND=torch).
+Keras 3 funciona sobre varios motores; el motor se elige en ia/__init__.py
+(TensorFlow si está instalado). En vivo la red corre con NumPy (ia/inferencia.py).
 """
 
 import json
-import os
 from pathlib import Path
 
 import numpy as np
 
-os.environ.setdefault("KERAS_BACKEND", "torch")
-
-from .caracteristicas import ETIQUETAS, GRUPOS, NOMBRES, explicar  # noqa: E402
+from .caracteristicas import ETIQUETAS, GRUPOS, NOMBRES, explicar
+from .inferencia import RedNumpy
 
 CARPETA = Path(__file__).with_name("artefactos")
 ARCHIVO_MODELO = CARPETA / "autoencoder.keras"
@@ -61,12 +59,12 @@ class DetectorIA:
         self.media = np.array(self.metadatos["normalizacion"]["media"], dtype="float32")
         self.desviacion = np.sqrt(np.array(self.metadatos["normalizacion"]["varianza"], dtype="float32")) + 1e-6
         self.umbral = float(self.metadatos["umbral"])
-        self._keras = keras
+        self.red = RedNumpy(self.modelo)
 
     def errores(self, matriz):
         """Error de reconstrucción de varias compras a la vez (para entrenar y evaluar)."""
         normalizada = (np.asarray(matriz, dtype="float32") - self.media) / self.desviacion
-        reconstruida = self._keras.ops.convert_to_numpy(self.modelo(normalizada, training=False))
+        reconstruida = self.red(normalizada)
         return ((normalizada - reconstruida) ** 2).mean(axis=1), (normalizada - reconstruida) ** 2
 
     def riesgo(self, error):
