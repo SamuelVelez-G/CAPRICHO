@@ -95,11 +95,12 @@ En **IA**:
 2. **Clasificador**: datos simulados etiquetados, 23 variables, red
    64-32-1, TensorFlow para normalizar y aumentar los fraudes.
 3. **Tabla por segmento** (observación 1 del profesor): con clientes nuevos el
-   clasificador detecta 85 % con 100 % de precisión; las reglas 56 %; el
-   autoencoder 82 % pero con muchas falsas alarmas.
-4. **Por tipo**: los pedidos grandes legítimos los marca el autoencoder (90 %)
-   y casi nunca el clasificador: aprendió de toda la población que eso es normal.
-5. **Aumento de datos**: F1 de 0,929 a 0,950.
+   clasificador detecta 81,5 % sin ninguna falsa alarma; las reglas 56 %; el
+   autoencoder 89 %, pero marca al 5,6 % de los clientes nuevos legítimos (F1
+   0,90 contra 0,80).
+4. **Por tipo**: los pedidos grandes legítimos los marca el autoencoder (44 %)
+   y nunca el clasificador: aprendió de toda la población que eso es normal.
+5. **Aumento de datos**: F1 de 0,929 a 0,943.
 6. **Probador**: "Cliente nuevo, monto alto" → FRAUDULENTA con 100 %
    conocimiento general; "Cliente habitual" → NORMAL.
 
@@ -142,7 +143,8 @@ protege, mide sus algoritmos y aprende de todos sus clientes."
 El clasificador aprende de fraudes etiquetados de toda la población (sirve con
 clientes nuevos); el autoencoder no necesita etiquetas y mide si una compra se
 parece a los hábitos de ese cliente. Medidos con los mismos datos, el
-clasificador es mejor (90,5 % contra 71,6 %, y muchas menos falsas alarmas).
+clasificador es mejor: F1 de 0,94 contra 0,34 (89 % de detección con 100 % de
+precisión, contra 77 % con 22 %).
 
 **¿De dónde salen las etiquetas?** De un simulador (`ia/simulador.py`) que
 genera 800 clientes con los hábitos de Capricho y siete tipos de fraude. Se
@@ -154,7 +156,7 @@ modelos en formato `.keras`.
 
 **¿Qué es el aumento de datos?** Los fraudes son pocos (3,7 %). Se repiten con un
 poco de ruido gaussiano en las variables continuas para que la red vea más
-variedad. Subió el F1 de 0,929 a 0,950.
+variedad. Subió el F1 de 0,929 a 0,943.
 
 **¿Cómo sabe cuánto conocimiento general o personal usó?** A cada grupo de
 variables se le pone el valor típico de una compra normal y se mide cuánto
@@ -166,8 +168,8 @@ aumento), así que la red da probabilidades altas; el umbral se eligió con el
 mejor F1 en validación, no a ojo.
 
 **¿Por qué NumPy en vivo si se usa Keras?** Keras entrena, guarda y carga. Para
-una sola operación, llamar a Keras toma 3 ms; la misma cuenta con NumPy toma
-0,02 ms. Las pruebas verifican que el resultado es idéntico.
+una sola operación, llamar a Keras toma unos 4 ms; la misma cuenta con NumPy toma
+0,03 ms. Las pruebas verifican que el resultado es el mismo.
 
 **¿Cómo se estima la complejidad?** Con una regresión lineal de log(tiempo)
 contra log(n): si t = c·nᵏ, entonces log t = log c + k·log n, y la pendiente es k.

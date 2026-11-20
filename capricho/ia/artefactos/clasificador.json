@@ -1,5 +1,5 @@
 {
- "creado": "2026-11-20T14:32:24",
+ "creado": "2026-11-20T15:09:07",
  "motor": "tensorflow",
  "versiones": {
   "tensorflow": "2.21.0",
@@ -127,7 +127,7 @@
   }
  ],
  "parametros": 3696,
- "umbral": 0.9880436021359119,
+ "umbral": 0.9978673919840673,
  "mediana_poblacion": 16000.0,
  "referencia": [
   -0.4255818724632263,
@@ -166,92 +166,128 @@
  },
  "historia": {
   "loss": [
-   0.29,
-   0.0768,
-   0.0523,
-   0.0415,
-   0.0355,
+   0.2903,
+   0.077,
+   0.0524,
+   0.0418,
+   0.0356,
    0.0316,
-   0.028,
+   0.0279,
    0.027,
    0.0245,
    0.021,
-   0.0207,
+   0.0208,
    0.0196,
    0.0182,
    0.0178,
-   0.0175,
+   0.0176,
    0.0162,
-   0.015,
+   0.0149,
    0.0147,
-   0.0134,
-   0.0147
+   0.0132,
+   0.0148,
+   0.0125,
+   0.0125,
+   0.0123,
+   0.0126,
+   0.0117,
+   0.011,
+   0.0113,
+   0.0094,
+   0.0117
   ],
   "val_loss": [
    0.0411,
    0.0148,
    0.0107,
-   0.0084,
-   0.0082,
+   0.0083,
+   0.0083,
    0.0072,
+   0.0071,
    0.007,
+   0.0066,
    0.0071,
-   0.0067,
-   0.0071,
-   0.0068,
-   0.0067,
-   0.0067,
-   0.0061,
-   0.0061,
+   0.0069,
+   0.0066,
+   0.0066,
+   0.006,
+   0.0062,
    0.0069,
    0.0064,
-   0.0068,
+   0.0067,
    0.0063,
-   0.0065
+   0.0065,
+   0.0071,
+   0.007,
+   0.0073,
+   0.0069,
+   0.0074,
+   0.0072,
+   0.0072,
+   0.0076,
+   0.0071
   ],
   "auc_pr": [
-   0.9088,
-   0.9885,
+   0.9086,
+   0.9884,
    0.9927,
-   0.9949,
+   0.9948,
    0.9957,
-   0.9967,
-   0.9973,
+   0.9968,
+   0.9972,
    0.9975,
    0.9979,
    0.9984,
    0.9987,
    0.9987,
    0.9988,
-   0.9991,
+   0.999,
    0.9989,
-   0.9992,
+   0.9994,
    0.9994,
    0.9995,
    0.9994,
+   0.9995,
+   0.9997,
+   0.9994,
+   0.9997,
+   0.9996,
+   0.9997,
+   0.9997,
+   0.9997,
+   0.9998,
    0.9995
   ],
   "val_auc_pr": [
-   0.9412,
-   0.9753,
-   0.978,
-   0.9782,
-   0.9797,
-   0.9803,
-   0.9802,
-   0.9807,
-   0.9818,
+   0.9408,
+   0.9752,
+   0.9778,
+   0.9781,
+   0.9796,
+   0.9804,
+   0.9801,
+   0.9809,
+   0.9819,
+   0.983,
    0.9829,
+   0.9835,
+   0.9821,
+   0.9835,
+   0.9826,
    0.9831,
-   0.9835,
-   0.9824,
-   0.9835,
+   0.9828,
+   0.9825,
+   0.9838,
    0.983,
-   0.983,
-   0.9827,
-   0.9824,
-   0.9835,
-   0.9828
+   0.9838,
+   0.9825,
+   0.9823,
+   0.9815,
+   0.9813,
+   0.9807,
+   0.9814,
+   0.9818,
+   0.9819
   ]
  },
  "aumento": {
@@ -273,60 +309,60 @@
    "auc_roc": 0.9991,
    "auc_pr": 0.9732,
    "epocas": 17,
-   "segundos": 5.7
+   "segundos": 8.3
   },
   "con_aumento": {
-   "umbral": 0.9880436021359119,
+   "umbral": 0.9978673919840673,
    "prueba": {
-    "exactitud": 0.9991,
+    "exactitud": 0.999,
     "precision": 1.0,
-    "recall": 0.9054,
-    "f1": 0.9504,
+    "recall": 0.8919,
+    "f1": 0.9429,
     "falsas_alarmas": 0.0,
     "matriz": {
-     "verdaderos_positivos": 67,
+     "verdaderos_positivos": 66,
      "falsos_positivos": 0,
-     "falsos_negativos": 7,
+     "falsos_negativos": 8,
      "verdaderos_negativos": 7660
     }
    },
-   "auc_roc": 0.9984,
-   "auc_pr": 0.9766,
-   "epocas": 20,
-   "segundos": 9.4
+   "auc_roc": 0.9981,
+   "auc_pr": 0.9757,
+   "epocas": 29,
+   "segundos": 16.2
   }
  },
  "prueba": {
-  "exactitud": 0.9991,
+  "exactitud": 0.999,
   "precision": 1.0,
-  "recall": 0.9054,
-  "f1": 0.9504,
+  "recall": 0.8919,
+  "f1": 0.9429,
   "falsas_alarmas": 0.0,
   "matriz": {
-   "verdaderos_positivos": 67,
+   "verdaderos_positivos": 66,
    "falsos_positivos": 0,
-   "falsos_negativos": 7,
+   "falsos_negativos": 8,
    "verdaderos_negativos": 7660
   }
  },
- "auc_roc": 0.9984,
- "auc_pr": 0.9766,
+ "auc_roc": 0.9981,
+ "auc_pr": 0.9757,
  "comparacion": {
   "clasificador": {
    "todos": {
     "operaciones": 7734,
     "fraudes": 74,
     "precision": 1.0,
-    "recall": 0.9054,
-    "f1": 0.9504,
+    "recall": 0.8919,
+    "f1": 0.9429,
     "falsas_alarmas": 0.0
    },
    "clientes_nuevos": {
     "operaciones": 188,
     "fraudes": 27,
     "precision": 1.0,
-    "recall": 0.8519,
-    "f1": 0.92,
+    "recall": 0.8148,
+    "f1": 0.898,
     "falsas_alarmas": 0.0
    },
    "con_historial": {
@@ -368,26 +404,26 @@
    "todos": {
     "operaciones": 7734,
     "fraudes": 74,
-    "precision": 0.1519,
-    "recall": 0.7162,
-    "f1": 0.2506,
-    "falsas_alarmas": 0.0386
+    "precision": 0.2201,
+    "recall": 0.7703,
+    "f1": 0.3423,
+    "falsas_alarmas": 0.0264
    },
    "clientes_nuevos": {
     "operaciones": 188,
     "fraudes": 27,
-    "precision": 0.7333,
-    "recall": 0.8148,
-    "f1": 0.7719,
-    "falsas_alarmas": 0.0497
+    "precision": 0.7273,
+    "recall": 0.8889,
+    "f1": 0.8,
+    "falsas_alarmas": 0.0559
    },
    "con_historial": {
     "operaciones": 7546,
     "fraudes": 47,
-    "precision": 0.0972,
-    "recall": 0.6596,
-    "f1": 0.1694,
-    "falsas_alarmas": 0.0384
+    "precision": 0.146,
+    "recall": 0.7021,
+    "f1": 0.2418,
+    "falsas_alarmas": 0.0257
    }
   },
   "reglas_y_clasificador": {
@@ -395,16 +431,16 @@
     "operaciones": 7734,
     "fraudes": 74,
     "precision": 1.0,
-    "recall": 0.9189,
-    "f1": 0.9577,
+    "recall": 0.9054,
+    "f1": 0.9504,
     "falsas_alarmas": 0.0
    },
    "clientes_nuevos": {
     "operaciones": 188,
     "fraudes": 27,
     "precision": 1.0,
-    "recall": 0.8519,
-    "f1": 0.92,
+    "recall": 0.8148,
+    "f1": 0.898,
     "falsas_alarmas": 0.0
    },
    "con_historial": {
@@ -424,7 +460,7 @@
    "descripcion": "Cuenta tomada: monto muy alto para ese cliente, otro método y a deshoras",
    "clasificador": 0.913,
    "reglas": 0.3478,
-   "autoencoder": 1.0,
+   "autoencoder": 0.9565,
    "reglas_y_clasificador": 0.9565
   },
   "cliente_nuevo": {
@@ -449,10 +485,10 @@
    "operaciones": 11,
    "fraude": true,
    "descripcion": "Cuenta nueva que paga varias veces con métodos distintos en una hora",
-   "clasificador": 0.7273,
+   "clasificador": 0.6364,
    "reglas": 0.0,
-   "autoencoder": 0.8182,
-   "reglas_y_clasificador": 0.7273
+   "autoencoder": 1.0,
+   "reglas_y_clasificador": 0.6364
   },
   "rafaga": {
    "operaciones": 10,
@@ -460,7 +496,7 @@
    "descripcion": "Ráfaga: 5 o más en menos de un segundo",
    "clasificador": 0.8,
    "reglas": 0.6,
-   "autoencoder": 0.1,
+   "autoencoder": 0.4,
    "reglas_y_clasificador": 0.8
   },
   "firma_invalida": {
@@ -487,7 +523,7 @@
    "descripcion": "Compra normal",
    "clasificador": 0.0,
    "reglas": 0.0,
-   "autoencoder": 0.0216,
+   "autoencoder": 0.0121,
    "reglas_y_clasificador": 0.0
   },
   "nuevo_legitimo": {
@@ -496,7 +532,7 @@
    "descripcion": "Cliente nuevo que compra normal",
    "clasificador": 0.0,
    "reglas": 0.0,
-   "autoencoder": 0.04,
+   "autoencoder": 0.064,
    "reglas_y_clasificador": 0.0
   },
   "pedido_grande": {
@@ -505,7 +541,7 @@
    "descripcion": "Pedido grande legítimo (familia u oficina)",
    "clasificador": 0.0,
    "reglas": 0.0,
-   "autoencoder": 0.8025,
+   "autoencoder": 0.4444,
    "reglas_y_clasificador": 0.0
   },
   "cambio_habito": {
@@ -514,7 +550,7 @@
    "descripcion": "Cliente que cambió un hábito",
    "clasificador": 0.0,
    "reglas": 0.0,
-   "autoencoder": 0.0472,
+   "autoencoder": 0.0709,
    "reglas_y_clasificador": 0.0
   },
   "repite_el_dia": {
@@ -523,7 +559,7 @@
    "descripcion": "Cliente que vuelve a comprar el mismo día",
    "clasificador": 0.0,
    "reglas": 0.0,
-   "autoencoder": 0.0689,
+   "autoencoder": 0.0582,
    "reglas_y_clasificador": 0.0
   }
  },
@@ -609,124 +645,124 @@
    "recall": 1.0
   },
   {
-   "umbral": 0.0001,
+   "umbral": 0.0,
    "precision": 0.0405,
    "recall": 1.0
   },
   {
-   "umbral": 0.0001,
+   "umbral": 0.0,
    "precision": 0.0423,
    "recall": 1.0
   },
   {
-   "umbral": 0.0001,
+   "umbral": 0.0,
    "precision": 0.0443,
    "recall": 1.0
   },
   {
-   "umbral": 0.0001,
+   "umbral": 0.0,
    "precision": 0.0465,
    "recall": 1.0
   },
   {
-   "umbral": 0.0001,
+   "umbral": 0.0,
    "precision": 0.049,
    "recall": 1.0
   },
   {
-   "umbral": 0.0001,
+   "umbral": 0.0,
    "precision": 0.0517,
    "recall": 1.0
   },
   {
-   "umbral": 0.0002,
+   "umbral": 0.0,
    "precision": 0.0547,
    "recall": 1.0
   },
   {
-   "umbral": 0.0002,
+   "umbral": 0.0,
    "precision": 0.0581,
    "recall": 1.0
   },
   {
-   "umbral": 0.0002,
+   "umbral": 0.0,
    "precision": 0.0619,
    "recall": 1.0
   },
   {
-   "umbral": 0.0003,
+   "umbral": 0.0,
    "precision": 0.0663,
    "recall": 1.0
   },
   {
-   "umbral": 0.0004,
+   "umbral": 0.0,
    "precision": 0.0714,
    "recall": 1.0
   },
   {
-   "umbral": 0.0005,
+   "umbral": 0.0001,
    "precision": 0.0772,
    "recall": 1.0
   },
   {
-   "umbral": 0.0006,
+   "umbral": 0.0001,
    "precision": 0.0843,
    "recall": 1.0
   },
   {
-   "umbral": 0.0008,
-   "precision": 0.0926,
-   "recall": 1.0
+   "umbral": 0.0001,
+   "precision": 0.0914,
+   "recall": 0.9865
   },
   {
-   "umbral": 0.0012,
+   "umbral": 0.0002,
    "precision": 0.1014,
    "recall": 0.9865
   },
   {
-   "umbral": 0.0017,
+   "umbral": 0.0003,
    "precision": 0.1139,
    "recall": 0.9865
   },
   {
-   "umbral": 0.0025,
+   "umbral": 0.0006,
    "precision": 0.1299,
    "recall": 0.9865
   },
   {
-   "umbral": 0.0037,
+   "umbral": 0.0011,
    "precision": 0.1511,
    "recall": 0.9865
   },
   {
-   "umbral": 0.0054,
-   "precision": 0.1807,
-   "recall": 0.9865
+   "umbral": 0.0021,
+   "precision": 0.1782,
+   "recall": 0.973
+  },
+  {
+   "umbral": 0.0039,
+   "precision": 0.2215,
+   "recall": 0.973
   },
   {
    "umbral": 0.008,
-   "precision": 0.2246,
-   "recall": 0.9865
-  },
-  {
-   "umbral": 0.0143,
    "precision": 0.2927,
    "recall": 0.973
   },
   {
-   "umbral": 0.0378,
+   "umbral": 0.0286,
    "precision": 0.4337,
    "recall": 0.973
   },
   {
-   "umbral": 0.3688,
+   "umbral": 0.345,
    "precision": 0.8276,
    "recall": 0.973
   },
   {
    "umbral": 1.0,
    "precision": 1.0,
-   "recall": 0.2297
+   "recall": 0.3108
   }
  ],
  "histograma": {
@@ -754,24 +790,24 @@
    1.0
   ],
   "normales": [
-   7581,
-   34,
-   13,
-   4,
-   5,
-   4,
+   7595,
+   32,
+   10,
+   2,
+   1,
+   2,
    3,
-   2,
-   2,
+   3,
    0,
    2,
-   4,
+   1,
+   0,
    2,
    1,
-   1,
+   3,
    0,
-   1,
    0,
+   2,
    0,
    1
   ],
@@ -792,17 +828,17 @@
    0,
    0,
    1,
-   1,
-   1,
-   1,
-   68
+   0,
+   0,
+   2,
+   69
   ]
  },
- "verificacion_numpy": 2.52636619957336e-07,
+ "verificacion_numpy": 3.308817124181296e-07,
  "inferencia": {
-  "keras_ms": 3.1139,
-  "numpy_ms": 0.0192,
-  "veces": 162.3
+  "keras_ms": 4.3588,
+  "numpy_ms": 0.0307,
+  "veces": 142.2
  },
  "ejemplos": [
   {
@@ -831,7 +867,7 @@
    "tipo": "repite_el_dia",
    "fraude": false,
    "nuevo": false,
-   "probabilidad": 0.001,
+   "probabilidad": 0.0,
    "detectado": false,
    "valor": 16000.0,
    "metodo": "Daviplata",
@@ -853,7 +889,7 @@
    "tipo": "cambio_habito",
    "fraude": false,
    "nuevo": false,
-   "probabilidad": 0.03,
+   "probabilidad": 0.075,
    "detectado": false,
    "valor": 27000.0,
    "metodo": "Efectivo",
@@ -875,7 +911,7 @@
    "tipo": "rafaga",
    "fraude": true,
    "nuevo": false,
-   "probabilidad": 0.001,
+   "probabilidad": 0.0,
    "detectado": false,
    "valor": 16000.0,
    "metodo": "PSE",
@@ -930,7 +966,7 @@
    "tipo": "mula",
    "fraude": true,
    "nuevo": true,
-   "probabilidad": 0.782,
+   "probabilidad": 0.909,
    "detectado": false,
    "valor": 90000.0,
    "metodo": "Daviplata",

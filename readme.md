@@ -40,8 +40,8 @@ Las dos observaciones del profesor después de la exposición:
 
 1. **Aprender de todos y no solo del historial de cada cliente.** El
    clasificador se entrena con toda la población y sus variables generales
-   sirven aunque el cliente sea nuevo: con clientes nuevos detecta el 85 % de
-   los fraudes con 100 % de precisión (las reglas, 56 %). Cada decisión dice
+   sirven aunque el cliente sea nuevo: con clientes nuevos detecta el 81,5 % de
+   los fraudes sin ninguna falsa alarma (las reglas, 56 %). Cada decisión dice
    cuánto conocimiento general y cuánto personal usó.
 2. **Una transferencia en vivo.** En `/transferir` (también desde un celular
    con ngrok) se hace una transferencia y `/en-vivo` muestra en ese momento cómo
@@ -173,11 +173,11 @@ Alternativa sin cuenta: `cloudflared tunnel --url http://localhost:5000`.
 Cuatro redes neuronales, sin LLM. Todas se entrenan con
 `herramientas/entrenar_modelos.py`, se guardan en formato `.keras` y la
 aplicación las carga al arrancar. En vivo se ejecutan con NumPy (los mismos
-pesos, 160 veces más rápido que llamar a Keras para una sola operación).
+pesos, unas 140 veces más rápido que llamar a Keras para una sola operación).
 
 | Modelo | Pregunta | Tipo | Resultado en datos que no vio |
 |---|---|---|---|
-| **Clasificador** (`ia/clasificador.py`) | ¿Esta operación es normal o fraudulenta? | Supervisado, 23 variables → 64 → 32 → 1 | Detecta 90,5 % de los fraudes con 100 % de precisión; con clientes nuevos 85,2 % |
+| **Clasificador** (`ia/clasificador.py`) | ¿Esta operación es normal o fraudulenta? | Supervisado, 23 variables → 64 → 32 → 1 | Detecta 89,2 % de los fraudes con 100 % de precisión; con clientes nuevos 81,5 % |
 | **Monto esperado** (`ia/monto.py`) | ¿Cuánto debería pagar este cliente? | Regresión | Error típico 45,9 % contra 48,7 % de la mediana del cliente |
 | **Autoencoder** (`ia/modelo.py`) | ¿Se parece a los hábitos de ESTE cliente? | Sin etiquetas | El de la exposición |
 | **Demanda** (`ia/demanda.py`) | ¿Cuánto se va a vender? | Series de tiempo | Error diario $87.261 contra $103.512 de la regresión lineal |
@@ -187,13 +187,17 @@ clientes con los hábitos de Capricho y 7 tipos de fraude etiquetados
 (`ia/simulador.py`), con división temporal (los últimos 14 días solo para
 probar). TensorFlow prepara los datos: `keras.layers.Normalization`, y
 `tf.data` mezcla y aumenta los fraudes con ruido gaussiano (el aumento sube el
-F1 de 0,929 a 0,950). Comparación en prueba:
+F1 de 0,929 a 0,943). Comparación en prueba:
 
-| Detector | Todos | Clientes nuevos | Precisión | Falsas alarmas |
-|---|---|---|---|---|
-| Reglas de la primera entrega | 52,7 % | 55,6 % | 100 % | 0 % |
-| Autoencoder de la exposición | 71,6 % | 81,5 % | 15,2 % | 3,86 % |
-| **Clasificador** | **90,5 %** | **85,2 %** | **100 %** | **0 %** |
+| Detector | Detecta (todos) | Detecta (clientes nuevos) | Precisión | Falsas alarmas | F1 |
+|---|---|---|---|---|---|
+| Reglas de la primera entrega | 52,7 % | 55,6 % | 100 % | 0 % | 0,69 |
+| Autoencoder de la exposición | 77,0 % | 88,9 % | 22,0 % | 2,64 % | 0,34 |
+| **Clasificador** | **89,2 %** | **81,5 %** | **100 %** | **0 %** | **0,94** |
+
+Con clientes nuevos el autoencoder detecta un poco más, pero marca el 5,6 % de
+las compras legítimas de clientes nuevos y solo el 73 % de lo que marca es
+fraude; el clasificador no tiene falsas alarmas (F1 0,90 contra 0,80).
 
 Cada decisión trae su explicación: qué variables empujaron hacia fraude o hacia
 normal y cuánto conocimiento general (de todos los clientes) y personal (del

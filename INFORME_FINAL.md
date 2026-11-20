@@ -100,9 +100,10 @@ página `/algoritmos` con gráficas log-log. Lo que se concluye:
 2. **Búsqueda por ID:** índice hash en memoria (diccionario) reconstruido al
    arrancar: O(1) en vez de O(n).
 3. **Inferencia de las redes en vivo:** llamar a Keras para una sola operación
-   toma 3,1 ms; copiar los pesos a NumPy y hacer la misma cuenta toma 0,019 ms
-   (162 veces más rápido, diferencia máxima 2,5·10⁻⁷). El análisis completo de
-   una transacción (reglas, estadística, tres redes) toma entre 1 y 3 ms.
+   toma unos 4 ms; copiar los pesos a NumPy y hacer la misma cuenta toma 0,03 ms
+   (unas 140 veces más rápido, con diferencias menores a una millonésima). El
+   análisis completo de una transacción (reglas, estadística, tres redes) toma
+   entre 1 y 3 ms.
 4. **Verificación de la cadena de facturas:** todos los ítems en una sola
    consulta (no una por factura): 2.300 facturas en unos 40 ms.
 
@@ -171,21 +172,29 @@ Cuatro redes neuronales de Keras (sin LLM), entrenadas con
 - **TensorFlow:** `keras.layers.Normalization` para preparar los datos,
   `tf.data` para mezclar 75/25 y **aumentar** los fraudes con ruido gaussiano,
   parada temprana sobre el AUC-PR de validación, y guardar/cargar el modelo.
-  El aumento sube el F1 de 0,929 a 0,950 (recall de 87,8 % a 90,5 %).
+  El aumento sube el F1 de 0,929 a 0,943 (recall de 87,8 % a 89,2 % y precisión
+  de 98,5 % a 100 %).
 - **Salida:** probabilidad de fraude, clasificación NORMAL o FRAUDULENTA
   (umbral con el mejor F1 en validación) y explicación por variables.
 
 Resultados en los días de prueba (que ningún modelo vio):
 
-| Detector | Detecta (todos) | Detecta (clientes nuevos) | Precisión | Falsas alarmas |
-|---|---|---|---|---|
-| Reglas de la primera entrega | 52,7 % | 55,6 % | 100 % | 0 % |
-| Autoencoder de la exposición | 71,6 % | 81,5 % | 15,2 % | 3,86 % |
-| **Clasificador** | **90,5 %** | **85,2 %** | **100 %** | **0 %** |
+| Detector | Detecta (todos) | Detecta (clientes nuevos) | Precisión | Falsas alarmas | F1 |
+|---|---|---|---|---|---|
+| Reglas de la primera entrega | 52,7 % | 55,6 % | 100 % | 0 % | 0,69 |
+| Autoencoder de la exposición | 77,0 % | 88,9 % | 22,0 % | 2,64 % | 0,34 |
+| **Clasificador** | **89,2 %** | **81,5 %** | **100 %** | **0 %** | **0,94** |
+
+En pedidos grandes legítimos (una familia, una oficina) el autoencoder da falsa
+alarma en el 44 % de los casos y el clasificador en ninguno: aprendió de toda
+la población que un pedido grande de día y con el método habitual es normal.
 
 **Respuesta a la observación del profesor:** el clasificador aprende de toda
-la población, así que un cliente nuevo también se evalúa con lo aprendido
-de todos (85 % de los fraudes de cuentas nuevas, contra 56 % de las reglas).
+la población, así que un cliente nuevo también se evalúa con lo aprendido de
+todos: detecta el 81,5 % de los fraudes de cuentas nuevas sin ninguna falsa
+alarma, contra 56 % de las reglas. El autoencoder detecta algo más en ese
+segmento (88,9 %), pero marca el 5,6 % de los clientes nuevos legítimos y solo
+el 73 % de lo que marca es fraude (F1 0,80 contra 0,90 del clasificador).
 Cada decisión informa cuánto conocimiento **general** y cuánto **personal**
 usó (con un cliente nuevo es 100 % general), midiendo el efecto de cada grupo
 de variables en log-odds.
