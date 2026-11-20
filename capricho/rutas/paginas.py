@@ -2,7 +2,7 @@
 
 from flask import Blueprint, redirect, render_template, request, url_for
 
-from ..seguridad import admin_requerido, login_requerido, usuario_actual
+from ..seguridad import admin_requerido, login_requerido, personal_requerido, usuario_actual
 
 bp = Blueprint("paginas", __name__)
 
@@ -66,3 +66,51 @@ def dashboard():
 @admin_requerido
 def operacion():
     return render_template("operacion.html")
+
+
+# --- Entrega final ------------------------------------------------------------
+
+@bp.get("/panel")
+@admin_requerido
+def panel():
+    return render_template("panel.html")
+
+
+@bp.get("/gestion")
+@personal_requerido
+def gestion():
+    return render_template("gestion.html")
+
+
+@bp.get("/calidad")
+@admin_requerido
+def calidad():
+    return render_template("calidad.html")
+
+
+@bp.get("/integridad")
+@admin_requerido
+def integridad():
+    return render_template("integridad.html")
+
+
+@bp.get("/algoritmos")
+def algoritmos():
+    return render_template("algoritmos.html")
+
+
+@bp.get("/estadistica")
+@admin_requerido
+def estadistica():
+    return render_template("estadistica.html")
+
+
+@bp.get("/en-vivo")
+@admin_requerido
+def en_vivo():
+    return render_template("en_vivo.html")
+
+
+@bp.get("/transferir")
+def transferir():
+    return render_template("transferir.html")

@@ -1,0 +1,31 @@
+{% from "_macros.html" import icono %}
+<div class="escenarios-vivo" id="escenarios" aria-label="Casos rápidos"></div>
+<form class="formulario form-vivo" id="form-transferencia" novalidate>
+  <div class="campo" data-campo="email">
+    <label for="t-email">Correo del cliente</label>
+    <input id="t-email" name="email" type="email" autocomplete="off" required placeholder="nombre@correo.com">
+    <span class="ayuda">Un correo que nunca haya comprado es un cliente nuevo.</span>
+    <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+  </div>
+  <div class="fila-campos">
+    <div class="campo" data-campo="valor">
+      <label for="t-valor">Monto ($)</label>
+      <input id="t-valor" name="valor" type="number" min="100" step="100" required value="12000">
+      <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+    </div>
+    <div class="campo" data-campo="metodo">
+      <label for="t-metodo">Método</label>
+      <select id="t-metodo" name="metodo">
+        <option>Nequi</option><option>Tarjeta</option><option>Daviplata</option><option>PSE</option>
+        <option>Efectivo</option><option>Transferencia</option>
+      </select>
+      <span class="campo__error" role="alert">{{ icono("alerta") }}<span></span></span>
+    </div>
+  </div>
+  <div class="fila-campos">
+    <label class="casilla"><input type="checkbox" name="alterar_firma"> Alterar el monto en el camino (firma inválida)</label>
+    <label class="casilla"><input type="checkbox" name="rafaga"> Enviar 6 en el mismo segundo (bot)</label>
+  </div>
+  <button class="boton boton--bloque" type="submit">{{ icono("enviar") }} Transferir ahora</button>
+</form>
+<div class="resultado-vivo" id="resultado-transferencia" hidden></div>

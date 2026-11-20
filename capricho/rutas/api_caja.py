@@ -127,7 +127,19 @@ def comprobante_de_prueba():
 @admin_requerido
 def verificar_integridad():
     config = current_app.config
-    return ok(integridad.verificar_todo(obtener_db(), config["LLAVE_INTEGRIDAD"], config["CARPETA_COMPROBANTES"]))
+    db = obtener_db()
+    resultado = integridad.verificar_todo(db, config["LLAVE_INTEGRIDAD"], config["CARPETA_COMPROBANTES"])
+    # Los últimos bloques de la cadena de facturas, para dibujarla.
+    rotos = {p["id"] for p in resultado["facturas"]["problemas"]}
+    alterada = min((p["id"] for p in resultado["facturas"]["problemas"]), default=None)
+    filas = db.execute(
+        """SELECT * FROM (SELECT id, numero, total, fecha_emision, hash, hash_anterior FROM facturas
+           WHERE id >= COALESCE(?, 0) ORDER BY id DESC LIMIT 7) ORDER BY id""" if alterada else
+        """SELECT * FROM (SELECT id, numero, total, fecha_emision, hash, hash_anterior FROM facturas
+           ORDER BY id DESC LIMIT 7) ORDER BY id""", (alterada - 2,) if alterada else ()).fetchall()
+    resultado["cadena"] = [{**dict(f), "codigo": facturacion.numero_visible(f["numero"]), "roto": f["id"] in rotos}
+                           for f in filas]
+    return ok(resultado)
 
 
 @bp.post("/integridad/alterar")

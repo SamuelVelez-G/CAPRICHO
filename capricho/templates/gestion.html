@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Gestión · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Módulos operativos</p>
+    <h1>Gestión de Capricho</h1>
+    <p>Caja (pedidos de cualquier canal con varios ítems, descuento, factura con número consecutivo e impuesto, y pago con comprobante), facturas, pedidos, ítems con inventario, categorías{% if usuario.rol == 'ADMIN' %} y usuarios con roles{% endif %}.</p>
+  </div>
+</section>
+
+<div class="contenedor" data-rol-gestion="{{ usuario.rol }}">
+  <div class="pestanas" role="tablist" aria-label="Módulos">
+    <button role="tab" type="button" aria-selected="true" aria-controls="panel-caja" data-pestana="caja">{{ icono("tienda") }} Caja</button>
+    <button role="tab" type="button" aria-selected="false" aria-controls="panel-facturas" data-pestana="facturas">{{ icono("tabla") }} Facturas</button>
+    <button role="tab" type="button" aria-selected="false" aria-controls="panel-pedidos" data-pestana="pedidos">{{ icono("cola") }} Pedidos</button>
+    <button role="tab" type="button" aria-selected="false" aria-controls="panel-items" data-pestana="items">{{ icono("vaso") }} Ítems e inventario</button>
+    <button role="tab" type="button" aria-selected="false" aria-controls="panel-categorias" data-pestana="categorias">{{ icono("grafo") }} Categorías</button>
+    {% if usuario.rol == 'ADMIN' %}
+    <button role="tab" type="button" aria-selected="false" aria-controls="panel-usuarios" data-pestana="usuarios">{{ icono("usuario") }} Usuarios</button>
+    {% endif %}
+  </div>
+
+  <section class="pestana" id="panel-caja" role="tabpanel">
+    <div class="rejilla rejilla--12-8">
+      <div class="tarjeta">
+        <h2 class="tarjeta__titulo">Nuevo pedido</h2>
+        <p class="tarjeta__sub">El precio lo calcula el servidor con la base de datos; aquí solo se muestra. Al crear el pedido se descuenta el inventario y se emite la factura.</p>
+        <form id="form-caja" class="formulario formulario--ancho" novalidate>
+          <div class="fila-campos">
+            <div class="campo" data-campo="cliente_email"><label for="c-cliente">Correo del cliente</label>
+              <input id="c-cliente" name="cliente_email" type="email" placeholder="Vacío = consumidor final" autocomplete="off">
+              <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="canal"><label for="c-canal">Canal</label>
+              <select id="c-canal" name="canal"><option value="PRESENCIAL">Presencial (caja)</option><option value="DOMICILIO">Domicilio (teléfono)</option>
+                <option value="APP">App</option><option value="WEB">Web</option></select>
+              <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          </div>
+          <div class="fila-campos">
+            <div class="campo" data-campo="tipo_entrega"><label for="c-entrega">Entrega</label>
+              <select id="c-entrega" name="tipo_entrega"><option value="RECOGER">En tienda</option><option value="DOMICILIO">Domicilio</option></select>
+              <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="barrio" hidden><label for="c-barrio">Barrio</label><select id="c-barrio" name="barrio"></select>
+              <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="direccion" hidden><label for="c-direccion">Dirección</label><input id="c-direccion" name="direccion" autocomplete="off">
+              <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          </div>
+          <fieldset class="lineas-caja">
+            <legend>Ítems</legend>
+            <div class="fila-campos fila-campos--linea">
+              <div class="campo"><label for="c-producto">Ítem</label><select id="c-producto"></select></div>
+              <div class="campo"><label for="c-cantidad">Cantidad</label><input id="c-cantidad" type="number" min="1" max="50" value="1"></div>
+              <div class="campo" id="caja-adiciones" hidden><label for="c-adiciones">Adiciones (Ctrl para varias)</label><select id="c-adiciones" multiple size="4"></select></div>
+              <button class="boton boton--sm boton--contorno" type="button" id="agregar-linea">{{ icono("mas") }} Agregar</button>
+            </div>
+            <div data-campo="items"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div id="lineas-caja"></div>
+          </fieldset>
+          <div class="fila-campos">
+            <div class="campo" data-campo="descuento_porcentaje"><label for="c-descuento">Descuento (%)</label>
+              <input id="c-descuento" name="descuento_porcentaje" type="number" min="0" max="100" value="0">
+              <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="motivo_descuento"><label for="c-motivo">Motivo del descuento</label>
+              <input id="c-motivo" name="motivo_descuento" autocomplete="off" placeholder="Obligatorio si hay descuento">
+              <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="metodo_pago"><label for="c-metodo">Método de pago</label>
+              <select id="c-metodo" name="metodo_pago"><option>Efectivo</option><option>Tarjeta</option><option>Nequi</option>
+                <option>Daviplata</option><option>PSE</option><option>Transferencia</option></select>
+              <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          </div>
+          <div class="total-grande"><span>Total estimado</span><strong id="caja-total">$0</strong></div>
+          <button class="boton boton--bloque" type="submit">{{ icono("enviar") }} Crear pedido y factura</button>
+        </form>
+      </div>
+      <div class="tarjeta" id="caja-factura">
+        <h2 class="tarjeta__titulo">Factura y pago</h2>
+        <p class="muted">Crea un pedido para ver su factura y registrar el pago.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pestana" id="panel-facturas" role="tabpanel" hidden>
+    <div class="tarjeta">
+      <div class="filtros-tabla">
+        <select id="f-estado" aria-label="Estado"><option value="">Todos los estados</option><option>EMITIDA</option><option>PAGADA</option><option>ANULADA</option></select>
+        <select id="f-canal" aria-label="Canal"><option value="">Todos los canales</option><option>PRESENCIAL</option><option>WEB</option><option>APP</option><option>DOMICILIO</option></select>
+        <input id="f-buscar" type="search" placeholder="FV-000123 o cliente" aria-label="Buscar factura">
+      </div>
+      <div id="t-facturas"></div>
+      <div class="paginacion" id="p-facturas"></div>
+    </div>
+  </section>
+
+  <section class="pestana" id="panel-pedidos" role="tabpanel" hidden>
+    <div class="tarjeta">
+      <div class="filtros-tabla">
+        <select id="pd-canal" aria-label="Canal"><option value="">Todos los canales</option><option>PRESENCIAL</option><option>WEB</option><option>APP</option><option>DOMICILIO</option></select>
+        <select id="pd-estado" aria-label="Estado"><option value="">Todos los estados</option><option>PENDIENTE_PAGO</option><option>SOLICITADO</option><option>EN_PROCESO</option><option>ENTREGADO</option><option>RECHAZADO</option><option>ANULADO</option></select>
+      </div>
+      <div id="t-pedidos"></div>
+      <div class="paginacion" id="p-pedidos"></div>
+    </div>
+  </section>
+
+  <section class="pestana" id="panel-items" role="tabpanel" hidden>
+    <div class="tarjeta">
+      <div class="tarjeta__cabeza"><div><h2 class="tarjeta__titulo">Ítems del catálogo</h2>
+        <p class="tarjeta__sub">CRUD con los cinco métodos HTTP. El inventario baja con cada venta; cada cambio queda en sus movimientos.</p></div>
+        {% if usuario.rol == 'ADMIN' %}<button class="boton boton--sm" type="button" id="nuevo-item">{{ icono("mas") }} Nuevo ítem</button>{% endif %}</div>
+      <div id="t-items"></div>
+    </div>
+  </section>
+
+  <section class="pestana" id="panel-categorias" role="tabpanel" hidden>
+    <div class="tarjeta">
+      <div class="tarjeta__cabeza"><div><h2 class="tarjeta__titulo">Categorías</h2>
+        <p class="tarjeta__sub">"Granizados", "granizado " y "GRANIZADOS" son la misma: el nombre se compara normalizado (sin tildes, mayúsculas ni plurales).</p></div>
+        {% if usuario.rol == 'ADMIN' %}<button class="boton boton--sm" type="button" id="nueva-categoria">{{ icono("mas") }} Nueva categoría</button>{% endif %}</div>
+      <div id="t-categorias"></div>
+    </div>
+  </section>
+
+  {% if usuario.rol == 'ADMIN' %}
+  <section class="pestana" id="panel-usuarios" role="tabpanel" hidden>
+    <div class="tarjeta">
+      <div class="tarjeta__cabeza"><div><h2 class="tarjeta__titulo">Usuarios y roles</h2>
+        <p class="tarjeta__sub">Administrador (todo), empleado (caja) y cliente. Quien tiene historial no se borra: se desactiva.</p></div>
+        <button class="boton boton--sm" type="button" id="nuevo-usuario">{{ icono("mas") }} Nuevo usuario</button></div>
+      <div class="filtros-tabla">
+        <select id="u-rol" aria-label="Rol"><option value="">Todos los roles</option><option>ADMIN</option><option>EMPLEADO</option><option>CLIENTE</option></select>
+        <input id="u-buscar" type="search" placeholder="Nombre, correo o celular" aria-label="Buscar usuario">
+      </div>
+      <div id="t-usuarios"></div>
+      <div class="paginacion" id="p-usuarios"></div>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/gestion.js') }}"></script>{% endblock %}

@@ -100,11 +100,11 @@ def _preparar_base_de_datos(app, estado):
 
 
 def _registrar_rutas(app):
-    from .rutas import (api_admin, api_auth, api_caja, api_domicilios, api_gestion, api_ia, api_laboratorio,
-                        api_pedidos, api_productos, api_transacciones, paginas)
+    from .rutas import (api_admin, api_analisis, api_auth, api_caja, api_domicilios, api_gestion, api_ia,
+                        api_laboratorio, api_pedidos, api_productos, api_transacciones, api_vivo, paginas)
 
-    for modulo in (paginas, api_auth, api_productos, api_domicilios, api_transacciones,
-                   api_pedidos, api_admin, api_laboratorio, api_ia, api_gestion, api_caja):
+    for modulo in (paginas, api_auth, api_productos, api_domicilios, api_transacciones, api_pedidos, api_admin,
+                   api_laboratorio, api_ia, api_gestion, api_caja, api_analisis, api_vivo):
         app.register_blueprint(modulo.bp)
 
     # Nombres alternativos del endpoint, por si el generador del profesor usa otro.

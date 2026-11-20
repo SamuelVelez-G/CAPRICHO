@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Algoritmos · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">O(1) · O(log n) · O(n) · O(n log n) · O(n²)</p>
+    <h1>Algoritmos y análisis experimental</h1>
+    <p>Ocho problemas reales de Capricho, cada uno resuelto de varias formas y medido con datos del sistema en tamaños crecientes. Todas las variantes dan el mismo resultado; lo que cambia es cuánto tardan cuando hay más datos.</p>
+  </div>
+</section>
+
+<div class="contenedor dash">
+  <div class="aviso aviso--alerta" id="sin-benchmark" hidden>{{ icono("info") }}<p>Todavía no se ha medido. Ejecuta <code class="mono">python herramientas/benchmark.py</code> (completo, hasta 50.000 datos) o el benchmark rápido de abajo.</p></div>
+  <div class="kpis kpis--5" id="bench-kpis"></div>
+
+  <section class="tarjeta tarjeta--grafica">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo" id="titulo-problema">Problema</h2><p class="tarjeta__sub" id="descripcion-problema"></p></div>
+      {% if usuario and usuario.rol == 'ADMIN' %}<button class="boton boton--sm" type="button" id="correr">{{ icono("reloj") }} Correr benchmark rápido</button>{% endif %}
+    </div>
+    <div class="selector-problema" id="selector"></div>
+    <p class="tarjeta__sub">Escala logarítmica en los dos ejes: así una recta con pendiente 1 es O(n), con pendiente 2 es O(n²) y plana es O(1). Las líneas punteadas son tiempos estimados que no se corrieron porque tardarían demasiado.</p>
+    <div id="leyenda-bench"></div>
+    <div class="grafica" id="g-bench"></div>
+    <div id="t-bench"></div>
+    <p class="aviso aviso--ok separado" id="conclusion">{{ icono("rayo") }}<span></span></p>
+  </section>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Teoría contra lo medido</h2>
+    <p class="tarjeta__sub">La pendiente sale de una regresión lineal sobre log(tiempo) contra log(n). R² cercano a 1 quiere decir que los puntos caen sobre la recta.</p>
+    <div id="t-teoria"></div>
+  </section>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">La optimización del algoritmo crítico</h2>
+    <p>El detector revisa cada transacción con una <strong>ventana deslizante</strong>. Con un doble ciclo, cada transacción se compararía con todas las demás: O(n²). La versión del detector usa el índice <code class="mono">(usuario_id, fecha_txn)</code> de SQLite para traer solo las del mismo usuario cerca de esa fecha, y dos punteros (o una deque por usuario) para contarlas en una sola pasada: O(n). En vivo, además, las tres redes neuronales se ejecutan con NumPy en vez de llamar a Keras (ver la página de IA).</p>
+    <div id="t-critico"></div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/algoritmos.js') }}"></script>{% endblock %}

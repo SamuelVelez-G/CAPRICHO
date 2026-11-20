@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}En vivo · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Transferencia en este momento</p>
+    <h1>Así decide el sistema, en vivo</h1>
+    <p>Haz una transferencia aquí, desde la página <strong>Transferir</strong> en un celular, o con el generador del profesor. Cada operación que llega aparece abajo con el análisis de cada parte del sistema: las reglas, la estadística del cliente y las redes neuronales con lo que aprendieron.</p>
+  </div>
+</section>
+
+<div class="contenedor dash">
+  <div class="aviso aviso--alerta" id="aviso-modo" hidden>{{ icono("info") }}<p></p></div>
+  <div class="kpis kpis--5" id="vivo-kpis"></div>
+
+  <div class="vivo">
+    <aside class="vivo__lado">
+      <section class="tarjeta">
+        <h2 class="tarjeta__titulo">Hacer una transferencia</h2>
+        <p class="tarjeta__sub">El servidor la firma como lo haría la pasarela de pagos y la manda al mismo detector del endpoint.</p>
+        {% include "_transferencia.html" %}
+      </section>
+      <section class="tarjeta">
+        <h2 class="tarjeta__titulo">Desde un celular</h2>
+        <p class="tarjeta__sub">Abre esta dirección en el celular (con ngrok, la dirección pública) y haz la transferencia desde ahí:</p>
+        <p class="enlace-grande" id="enlace-celular">/transferir</p>
+      </section>
+      <section class="tarjeta">
+        <div class="tarjeta__cabeza">
+          <h2 class="tarjeta__titulo">Llegando</h2>
+          <span class="en-vivo"><span class="punto-vivo"></span>Escuchando</span>
+        </div>
+        <ol class="feed-vivo" id="feed"></ol>
+      </section>
+    </aside>
+
+    <section class="tarjeta vivo__analisis" aria-live="polite">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Análisis paso a paso</h2>
+          <p class="tarjeta__sub" id="analisis-sub">Esperando una transferencia…</p></div>
+        <label class="casilla"><input type="checkbox" id="seguir" checked> Mostrar la última que llegue</label>
+      </div>
+      <ol class="pasos-vivo" id="pasos"></ol>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/en_vivo.js') }}"></script>{% endblock %}

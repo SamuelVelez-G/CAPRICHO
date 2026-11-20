@@ -48,9 +48,11 @@ class Datos:
         self.lineas = [(f[0], f[1]) for f in db.execute("SELECT producto_id, cantidad FROM pedido_items")]
         self.nombres = [f[0] for f in db.execute("SELECT nombre FROM usuarios")] + \
                        [f[0] for f in db.execute("SELECT nombre FROM productos")]
-        if not self.txns:
+        if not self.txns:                   # base sin transacciones: datos de respaldo con fechas distintas
+            from datetime import timedelta
             momento = ahora()
-            self.txns = [(f"T{i}", i % 30, 9_000 + 1_000 * (i % 20), a_texto(momento)) for i in range(500)]
+            self.txns = [(f"T{i:04d}", i % 30, 9_000 + 1_000 * (i % 20), a_texto(momento - timedelta(seconds=i * 7.3)))
+                         for i in range(500, 0, -1)]
         if not self.clientes_pedidos:
             self.clientes_pedidos = [t[1] for t in self.txns]
         if not self.lineas:

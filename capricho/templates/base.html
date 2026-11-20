@@ -30,10 +30,7 @@
         <a href="{{ url_for('paginas.inicio') }}#domicilios">Domicilios</a>
         <a href="{{ url_for('paginas.laboratorio') }}" {% if request.endpoint == 'paginas.laboratorio' %}aria-current="page"{% endif %}>Laboratorio</a>
         <a href="{{ url_for('paginas.ia') }}" {% if request.endpoint == 'paginas.ia' %}aria-current="page"{% endif %}>IA</a>
-        {% if usuario and usuario.rol == 'ADMIN' %}
-          <a href="{{ url_for('paginas.dashboard') }}" {% if request.endpoint == 'paginas.dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
-          <a href="{{ url_for('paginas.operacion') }}" {% if request.endpoint == 'paginas.operacion' %}aria-current="page"{% endif %}>Operación</a>
-        {% endif %}
+        <a href="{{ url_for('paginas.transferir') }}" {% if request.endpoint == 'paginas.transferir' %}aria-current="page"{% endif %}>Transferir</a>
       </nav>
       <div class="barra__acciones">
         {% if usuario %}
@@ -50,6 +47,23 @@
       <button class="menu-movil" id="menu-movil" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menú">{{ icono("menu") }}</button>
     </div>
   </header>
+
+  {% if usuario and usuario.rol in ('ADMIN', 'EMPLEADO') %}
+  {% set modulos = [('paginas.panel', 'Panel', 'grafico'), ('paginas.en_vivo', 'En vivo', 'rayo'),
+                    ('paginas.gestion', 'Gestión', 'tienda'), ('paginas.dashboard', 'Antifraude', 'escudo'),
+                    ('paginas.calidad', 'Calidad', 'matraz'), ('paginas.integridad', 'Integridad', 'candado'),
+                    ('paginas.estadistica', 'Estadística', 'tabla'), ('paginas.algoritmos', 'Algoritmos', 'reloj'),
+                    ('paginas.operacion', 'Operación', 'cola')] if usuario.rol == 'ADMIN'
+                   else [('paginas.gestion', 'Gestión', 'tienda'), ('paginas.algoritmos', 'Algoritmos', 'reloj')] %}
+  <nav class="subnav" aria-label="Módulos del personal">
+    <div class="contenedor subnav__fila">
+      <span class="subnav__rol">{{ 'Administración' if usuario.rol == 'ADMIN' else 'Caja' }}</span>
+      {% for endpoint, texto, simbolo in modulos %}
+        <a href="{{ url_for(endpoint) }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ icono(simbolo) }}{{ texto }}</a>
+      {% endfor %}
+    </div>
+  </nav>
+  {% endif %}
 
   <main id="contenido">
     {% block contenido %}{% endblock %}

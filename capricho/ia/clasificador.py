@@ -8,12 +8,15 @@ La salida es la probabilidad de fraude (0 a 1). Es aprendizaje SUPERVISADO:
 se entrena con operaciones etiquetadas (ia/simulador.py) y aprende de toda
 la población, no de un solo cliente.
 
-Explicación de cada decisión (por qué dijo fraude):
+Explicación de cada decisión:
   a cada grupo de variables se le pone el valor típico de una compra normal y
-  se mide cuánto baja la probabilidad. Lo que más la baja es lo que más pesó.
-  Sumando lo que aportan las variables generales y las personales se sabe
-  cuánto conocimiento GENERAL (de todos los clientes) y cuánto PERSONAL (del
-  historial de ese cliente) usó la red. Con un cliente nuevo es 100 % general.
+  se mide cuánto cambia la decisión, en log-odds (log(p / (1 - p))): así se
+  nota el efecto aunque la probabilidad esté pegada a 0 o a 1. Si quitar el
+  grupo baja la probabilidad, ese grupo empujaba hacia FRAUDE; si la sube,
+  empujaba hacia NORMAL. Sumando el peso de las variables generales y el de
+  las personales se sabe cuánto conocimiento GENERAL (de todos los clientes)
+  y cuánto PERSONAL (del historial de ese cliente) usó la red. Con un cliente
+  nuevo es 100 % general.
 """
 
 import json
@@ -78,22 +81,26 @@ class ClasificadorIA:
             lote[fila, indices] = self.referencia[indices]
         salida = self.probabilidades(lote)
         probabilidad = float(salida[0])
+        logit = np.log(np.clip(salida, 1e-9, 1 - 1e-9) / np.clip(1 - salida, 1e-9, 1))
 
-        factores = []
+        cambios = {}
         for fila, grupo in enumerate(grupos, start=1):
             personal = grupo in operaciones.PERSONALES
-            aporte = 0.0 if (personal and nuevo) else probabilidad - float(salida[fila])
-            factores.append({"grupo": grupo, "nombre": operaciones.ETIQUETAS[grupo], "aporte": round(aporte * 100, 1),
-                             "tipo": "personal" if personal else "general",
+            cambios[grupo] = 0.0 if (personal and nuevo) else float(logit[0] - logit[fila])
+        suma = sum(abs(v) for v in cambios.values()) or 1.0
+        factores = []
+        for grupo, cambio in cambios.items():
+            factores.append({"grupo": grupo, "nombre": operaciones.ETIQUETAS[grupo],
+                             "aporte": round(100 * cambio / suma, 1),      # % del peso total, con signo
+                             "direccion": "fraude" if cambio > 0 else "normal",
+                             "tipo": "personal" if grupo in operaciones.PERSONALES else "general",
                              "explicacion": operaciones.explicar(grupo, contexto)})
-        factores.sort(key=lambda f: -f["aporte"])
-        general = sum(max(0.0, f["aporte"]) for f in factores if f["tipo"] == "general")
-        personal = sum(max(0.0, f["aporte"]) for f in factores if f["tipo"] == "personal")
-        if general + personal == 0:
-            general = sum(abs(f["aporte"]) for f in factores if f["tipo"] == "general")
-            personal = sum(abs(f["aporte"]) for f in factores if f["tipo"] == "personal")
-        total = (general + personal) or 1.0
+        # Primero lo que empujó hacia la decisión que se tomó.
         fraudulenta = probabilidad >= self.umbral
+        factores.sort(key=lambda f: -f["aporte"] if fraudulenta else f["aporte"])
+        general = sum(abs(f["aporte"]) for f in factores if f["tipo"] == "general")
+        personal = sum(abs(f["aporte"]) for f in factores if f["tipo"] == "personal")
+        total = (general + personal) or 1.0
         return {
             "probabilidad": round(probabilidad, 4), "porcentaje": round(probabilidad * 100, 1),
             "umbral": round(self.umbral, 4), "fraudulenta": fraudulenta,

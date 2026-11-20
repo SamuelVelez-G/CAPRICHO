@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Panel · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Ventas · alertas · calidad · benchmark · modelos</p>
+    <h1>Panel de Capricho</h1>
+    <p>Lo que pasa en el negocio, en una sola página: cuánto se vende y cuándo, qué se predice para la próxima semana, qué alertas hay, qué tan limpios están los datos, qué tan rápidos son los algoritmos y qué tan bien funcionan los modelos de IA.</p>
+  </div>
+</section>
+
+<div class="contenedor dash">
+  <div class="kpis kpis--5" id="panel-kpis"></div>
+
+  <section class="tarjeta tarjeta--grafica">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Ventas por día y predicción de la próxima semana</h2>
+        <p class="tarjeta__sub" id="sub-ventas">Últimas 8 semanas. La tendencia es una regresión lineal simple; la red de Keras además aprende el patrón semanal.</p></div>
+    </div>
+    <div id="leyenda-ventas"></div>
+    <div class="grafica" id="g-ventas"></div>
+    <p class="nota" id="nota-demanda"></p>
+  </section>
+
+  <div class="rejilla rejilla--3">
+    <section class="tarjeta tarjeta--grafica"><h2 class="tarjeta__titulo">Por canal</h2><p class="tarjeta__sub">Ventas de los últimos 30 días.</p><div class="grafica" id="g-canal"></div></section>
+    <section class="tarjeta tarjeta--grafica"><h2 class="tarjeta__titulo">Por hora del día</h2><p class="tarjeta__sub">Patrón horario de las ventas.</p><div class="grafica" id="g-hora"></div></section>
+    <section class="tarjeta tarjeta--grafica"><h2 class="tarjeta__titulo">Por día de la semana</h2><p class="tarjeta__sub">Promedio de las últimas 8 semanas.</p><div class="grafica" id="g-semana"></div></section>
+  </div>
+
+  <div class="rejilla rejilla--2">
+    <section class="tarjeta"><h2 class="tarjeta__titulo">Ítems más vendidos</h2><p class="tarjeta__sub">Ranking de 30 días (en el benchmark: diccionario + heap, O(n)).</p><div id="t-ranking"></div></section>
+    <section class="tarjeta"><h2 class="tarjeta__titulo">Inventario por agotarse</h2><p class="tarjeta__sub">Ítems con stock cerca del mínimo. Cada venta descuenta y cada anulación devuelve.</p><div id="t-inventario"></div></section>
+  </div>
+
+  <div class="rejilla rejilla--2">
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza"><div><h2 class="tarjeta__titulo">Alertas recientes</h2>
+        <p class="tarjeta__sub">Estadística por empleado, comprobantes, integridad y calidad. Las de transacciones están en Antifraude.</p></div>
+        <a class="boton boton--sm boton--contorno" href="{{ url_for('paginas.estadistica') }}">Ver estadística</a></div>
+      <div id="t-alertas"></div>
+    </section>
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza"><h2 class="tarjeta__titulo">Calidad de los datos</h2>
+        <a class="boton boton--sm boton--contorno" href="{{ url_for('paginas.calidad') }}">Abrir</a></div>
+      <div id="resumen-calidad"></div>
+    </section>
+  </div>
+
+  <div class="rejilla rejilla--2">
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza"><h2 class="tarjeta__titulo">Modelos de IA</h2>
+        <a class="boton boton--sm boton--contorno" href="{{ url_for('paginas.ia') }}">Ver detalle</a></div>
+      <div id="resumen-modelos"></div>
+    </section>
+    <section class="tarjeta">
+      <div class="tarjeta__cabeza"><h2 class="tarjeta__titulo">Benchmark de algoritmos</h2>
+        <a class="boton boton--sm boton--contorno" href="{{ url_for('paginas.algoritmos') }}">Ver detalle</a></div>
+      <div id="resumen-benchmark"></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/panel.js') }}"></script>{% endblock %}

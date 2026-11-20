@@ -242,6 +242,7 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None, cana
             "regla": regla["nombre"],
             "ventana_segundos": regla["ventana_segundos"],
             "umbral": regla["umbral"],
+            "monto_limite": reglas["monto_atipico"],
         }
 
         # Todas las transacciones cuentan en la ventana, también las de hash
@@ -329,7 +330,8 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None, cana
                     analisis["monto_esperado"] = estado.monto.evaluar(contexto)
                 tiempos["clasificador"] = round((reloj.perf_counter() - paso) * 1000, 2)
                 if veredicto["fraudulenta"] and marcar:
-                    principales = "; ".join([f["explicacion"] for f in veredicto["factores"] if f["aporte"] > 0][:2])
+                    principales = "; ".join([f["explicacion"] for f in veredicto["factores"]
+                                             if f["direccion"] == "fraude"][:2])
                     anomalias.append(_anomalia(
                         "FRAUDE_CLASIFICADOR", veredicto["nivel"], 1, 0,
                         f"Probabilidad de fraude {veredicto['porcentaje']:.0f} % ({veredicto['segmento']}, "

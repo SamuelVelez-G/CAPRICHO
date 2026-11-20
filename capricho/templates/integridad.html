@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Integridad · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Hash encadenado HMAC-SHA256</p>
+    <h1>Integridad de facturas y pagos</h1>
+    <p>Cada factura guarda el hash de la anterior y su propio hash calculado sobre su contenido. Si alguien cambia una factura o borra una del medio, la cadena deja de cuadrar justo ahí. Con los pagos pasa lo mismo, y además se revisa que el comprobante adjunto no haya sido reemplazado.</p>
+  </div>
+</section>
+
+<div class="contenedor dash">
+  <div class="kpis kpis--5" id="integridad-kpis"></div>
+
+  <section class="tarjeta">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">La cadena de facturas</h2>
+        <p class="tarjeta__sub">hash = HMAC-SHA256(llave, hash_anterior | contenido). Sin la llave nadie puede recalcularla para tapar un cambio.</p></div>
+      <button class="boton boton--sm" type="button" id="verificar">{{ icono("candado") }} Verificar ahora</button>
+    </div>
+    <div class="cadena" id="cadena"></div>
+    <div id="problemas"></div>
+  </section>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Laboratorio: alguien altera una factura a escondidas</h2>
+    <p class="tarjeta__sub">Esto cambia el total directamente en SQLite, como lo haría alguien con acceso a la base de datos, sin pasar por la aplicación. Después se verifica la cadena.</p>
+    <form class="formulario formulario--ancho" id="form-alterar" novalidate>
+      <div class="fila-campos">
+        <div class="campo" data-campo="numero"><label for="a-numero">Número de factura</label><input id="a-numero" name="numero" type="number" min="1">
+          <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+        <div class="campo" data-campo="total"><label for="a-total">Nuevo total ($)</label><input id="a-total" name="total" type="number" min="0" value="1000">
+          <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+      </div>
+      <div class="hero__acciones">
+        <button class="boton boton--peligro" type="submit">{{ icono("bloqueo") }} Alterar la factura</button>
+        <button class="boton boton--contorno" type="button" id="restaurar">{{ icono("actualizar") }} Restaurar</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/integridad.js') }}"></script>{% endblock %}

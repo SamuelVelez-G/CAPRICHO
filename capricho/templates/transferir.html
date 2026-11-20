@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Transferir · Capricho{% endblock %}
+{% block contenido %}
+<section class="pagina-simple">
+  <div class="contenedor contenedor--angosto">
+    <p class="eyebrow">Pasarela de pagos de prueba</p>
+    <h1>Haz una transferencia</h1>
+    <p class="muted">Esta transferencia llega al detector de Capricho en este mismo momento. En la pantalla de <strong>En vivo</strong> se ve cómo la analizó cada parte del sistema. Es dinero simulado.</p>
+    <section class="tarjeta">
+      {% include "_transferencia.html" %}
+    </section>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/transferir.js') }}"></script>{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Estadística · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Simple Statistics · cuartiles · puntaje z · regresión lineal</p>
+    <h1>Anomalías por usuario con estadística simple</h1>
+    <p>Cada cliente tiene su perfil: cuánto suele pagar (cuartiles), a qué hora y con qué método. Un monto por encima de la cerca de Tukey (Q3 + 1,5·IQR) es atípico. Con los empleados se mira cuántos descuentos dan y cuántas facturas anulan por día. El servidor lo calcula en Python en cada operación y esta página lo recalcula en el navegador con la librería Simple Statistics.</p>
+  </div>
+</section>
+
+<div class="contenedor dash">
+  <div class="rejilla rejilla--12-8 rejilla--invertida">
+    <aside class="tarjeta">
+      <h2 class="tarjeta__titulo">Usuarios</h2>
+      <input id="buscar-usuario" type="search" placeholder="Buscar por nombre o correo" aria-label="Buscar usuario">
+      <div class="lista-usuarios separado" id="usuarios"></div>
+    </aside>
+    <div class="dash">
+      <section class="tarjeta">
+        <div class="tarjeta__cabeza"><div><h2 class="tarjeta__titulo" id="perfil-titulo">Perfil estadístico</h2>
+          <p class="tarjeta__sub" id="perfil-sub">Elige un usuario.</p></div></div>
+        <div class="kpis kpis--5" id="perfil-kpis"></div>
+        <h3 class="separado">Montos: su perfil frente a la población</h3>
+        <p class="tarjeta__sub">La caja va de Q1 a Q3 y la raya gruesa es la mediana. La línea roja punteada es la cerca superior (Q3 + 1,5·IQR); los círculos son sus compras atípicas.</p>
+        <div class="grafica" id="g-cajas"></div>
+        <h3 class="separado">Servidor (Python) contra navegador (Simple Statistics)</h3>
+        <p class="tarjeta__sub">Los mismos datos, dos implementaciones independientes. Si coinciden, el cálculo que clasifica cada operación en el servidor es correcto.</p>
+        <div id="comparacion"></div>
+        <div class="rejilla rejilla--2 separado">
+          <div><h3>¿A qué hora compra?</h3><div class="grafica" id="g-horas"></div></div>
+          <div><h3>¿Con qué paga?</h3><div id="t-metodos"></div></div>
+        </div>
+      </section>
+
+      <section class="tarjeta" id="seccion-empleado" hidden>
+        <h2 class="tarjeta__titulo">Descuentos y anulaciones por día</h2>
+        <p class="tarjeta__sub">Tasa diaria de este empleado (descuentos y anulaciones por factura). La normalidad sale de todos los días de todos los empleados; por encima de la cerca superior se genera una alerta.</p>
+        <div id="leyenda-empleado"></div>
+        <div class="grafica" id="g-empleado"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Empleados comparados entre sí</h2>
+    <p class="tarjeta__sub">Puntaje z de cada empleado frente a los demás: z = (su tasa − media) / desviación. Un z alto es alguien muy por encima del resto.</p>
+    <div id="t-empleados"></div>
+  </section>
+
+  <section class="tarjeta tarjeta--grafica">
+    <h2 class="tarjeta__titulo">Regresión lineal simple para la demanda (Simple Statistics)</h2>
+    <p class="tarjeta__sub">Ventas de cada día de las últimas 8 semanas: <code class="mono">linearRegression</code> y <code class="mono">rSquared</code> de la librería, calculados aquí en el navegador, frente a lo que calculó el servidor.</p>
+    <div id="leyenda-regresion"></div>
+    <div class="grafica" id="g-regresion"></div>
+    <div id="comparacion-regresion"></div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/estadistica.js') }}"></script>{% endblock %}

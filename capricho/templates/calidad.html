@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Calidad de datos · Capricho{% endblock %}
+{% block contenido %}
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Limpieza · normalización · reporte de calidad</p>
+    <h1>Calidad de los datos</h1>
+    <p>Clientes registrados dos veces, celulares mal escritos, ítems repetidos, precios con un cero de más y categorías escritas distinto. La auditoría los encuentra en lo que ya está guardado y la importación limpia los archivos antes de que entren.</p>
+  </div>
+</section>
+
+<div class="contenedor dash">
+  <section class="tarjeta">
+    <div class="tarjeta__cabeza">
+      <div><h2 class="tarjeta__titulo">Auditoría de la base de datos</h2>
+        <p class="tarjeta__sub" id="sub-auditoria">Duplicados por correo, celular y nombre normalizados (diccionario: una pasada, O(n)).</p></div>
+      <button class="boton boton--sm" type="button" id="corregir">{{ icono("actualizar") }} Corregir lo automático</button>
+    </div>
+    <div class="dimensiones" id="dimensiones"></div>
+    <div class="aviso aviso--ok separado" id="resultado-correccion" hidden>{{ icono("ok") }}<p></p></div>
+    <div class="separado" id="t-problemas"></div>
+  </section>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Importar un archivo sucio</h2>
+    <p class="tarjeta__sub">CSV (coma o punto y coma) o JSON. Cada registro se valida contra el esquema, se normaliza y se clasifica. Prueba con los archivos de ejemplo:
+      <a href="/api/calidad/ejemplo/clientes_sucios.csv">clientes_sucios.csv</a> ·
+      <a href="/api/calidad/ejemplo/items_sucios.json">items_sucios.json</a></p>
+    <form class="formulario formulario--ancho" id="form-importar" novalidate>
+      <div class="fila-campos">
+        <div class="campo" data-campo="tipo"><label for="i-tipo">Qué contiene</label>
+          <select id="i-tipo" name="tipo"><option value="clientes">Clientes (nombre, email, telefono)</option><option value="items">Ítems (nombre, categoria, precio, stock)</option></select>
+          <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+        <div class="campo" data-campo="archivo"><label for="i-archivo">Archivo</label>
+          <input id="i-archivo" name="archivo" type="file" accept=".csv,.json,text/csv,application/json">
+          <span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+      </div>
+      <label class="casilla"><input type="checkbox" name="aplicar" value="1"> Guardar en la base los registros válidos y corregidos</label>
+      <button class="boton separado" type="submit">{{ icono("matraz") }} Analizar archivo</button>
+    </form>
+    <div id="reporte" class="separado"></div>
+  </section>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Historial de reportes</h2>
+    <div id="t-historial"></div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/calidad.js') }}"></script>{% endblock %}

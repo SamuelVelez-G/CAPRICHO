@@ -362,3 +362,113 @@ export function histogramaDoble(contenedor, bordes, grupos, umbral, { alto = 240
   const tipActual = contenedor.querySelector(".tooltip");
   vaciar(contenedor, svg("svg", { viewBox: `0 0 ${ancho} ${alto}`, width: ancho, height: alto, role: "img" }, ...capas), tipActual);
 }
+
+/**
+ * Líneas sobre ejes X e Y numéricos, con huecos (y = null) y escala
+ * logarítmica opcional (el benchmark usa log-log: una recta de pendiente 2 es O(n²)).
+ * series: [{nombre, color, puntos: [{x, y}], punteada}]
+ */
+export function serieXY(contenedor, series, { alto = 260, logX = false, logY = false, formatoX = (v) => numero(v),
+  formatoY = (v) => numero(v), tituloTip = (x) => formatoX(x), ticksX } = {}) {
+  const ancho = Math.max(320, contenedor.clientWidth);
+  const m = { arriba: 16, derecha: 14, abajo: 30, izquierda: 58 };
+  const puntos = series.flatMap((s) => s.puntos.filter((p) => p.y !== null && p.y !== undefined));
+  if (!puntos.length) return vaciar(contenedor, el("p", { class: "muted", text: "Sin datos." }));
+  const fx = logX ? Math.log10 : (v) => v;
+  const fy = logY ? Math.log10 : (v) => v;
+  const xs = puntos.map((p) => fx(p.x));
+  const ys = puntos.map((p) => fy(Math.max(p.y, logY ? 1e-6 : -Infinity)));
+  let [xmin, xmax] = [Math.min(...xs), Math.max(...xs)];
+  let [ymin, ymax] = [logY ? Math.floor(Math.min(...ys)) : Math.min(0, ...ys), Math.max(...ys)];
+  if (logY) ymax = Math.ceil(ymax);
+  if (xmax === xmin) xmax = xmin + 1;
+  if (ymax === ymin) ymax = ymin + 1;
+  const x = (v) => m.izquierda + ((fx(v) - xmin) / (xmax - xmin)) * (ancho - m.izquierda - m.derecha);
+  const y = (v) => m.arriba + (alto - m.arriba - m.abajo) * (1 - (fy(Math.max(v, logY ? 1e-6 : -Infinity)) - ymin) / (ymax - ymin));
+  const capas = [];
+  const marcasY = [];
+  if (logY) for (let e = ymin; e <= ymax; e++) marcasY.push(10 ** e);
+  else { const paso = pasoLimpio(ymax - ymin); for (let v = Math.ceil(ymin / paso) * paso; v <= ymax + 1e-9; v += paso) marcasY.push(v); }
+  for (const v of marcasY) {
+    capas.push(svg("line", { class: "rejilla-linea", x1: m.izquierda, x2: ancho - m.derecha, y1: y(v), y2: y(v) }));
+    capas.push(svg("text", { class: "tick", x: m.izquierda - 8, y: y(v) + 4, "text-anchor": "end", text: formatoY(v) }));
+  }
+  const unicos = [...new Set(puntos.map((p) => p.x))].sort((a, b) => a - b);
+  const marcasX = ticksX || unicos.filter((_, i) => i % Math.ceil(unicos.length / 7) === 0);
+  for (const v of marcasX) capas.push(svg("text", { class: "tick", x: x(v), y: alto - 8, "text-anchor": "middle", text: formatoX(v) }));
+  capas.push(svg("line", { class: "eje", x1: m.izquierda, x2: ancho - m.derecha, y1: alto - m.abajo, y2: alto - m.abajo }));
+  for (const serie of series) {
+    let d = "";
+    let abierto = false;
+    for (const p of serie.puntos) {
+      if (p.y === null || p.y === undefined) { abierto = false; continue; }
+      d += `${abierto ? "L" : "M"}${x(p.x).toFixed(1)},${y(p.y).toFixed(1)}`;
+      abierto = true;
+    }
+    capas.push(svg("path", { d, fill: "none", stroke: serie.color, "stroke-width": 2.2, "stroke-linejoin": "round",
+      "stroke-linecap": "round", "stroke-dasharray": serie.punteada ? "6 5" : null }));
+    for (const p of serie.puntos) {
+      if (p.y !== null && p.y !== undefined && serie.marcas !== false) {
+        capas.push(svg("circle", { cx: x(p.x), cy: y(p.y), r: 3, fill: serie.color, stroke: "var(--papel)", "stroke-width": 1.5 }));
+      }
+    }
+  }
+  const tip = crearTooltip(contenedor);
+  const guia = svg("line", { class: "guia", y1: m.arriba, y2: alto - m.abajo, visibility: "hidden" });
+  const zona = svg("rect", { x: m.izquierda, y: m.arriba, width: ancho - m.izquierda - m.derecha, height: alto - m.arriba - m.abajo, fill: "transparent" });
+  zona.addEventListener("pointermove", (evento) => {
+    const caja = zona.getBoundingClientRect();
+    const px = m.izquierda + ((evento.clientX - caja.left) / caja.width) * (ancho - m.izquierda - m.derecha);
+    const cercano = unicos.reduce((a, b) => (Math.abs(x(b) - px) < Math.abs(x(a) - px) ? b : a));
+    guia.setAttribute("x1", x(cercano)); guia.setAttribute("x2", x(cercano)); guia.setAttribute("visibility", "visible");
+    const filas = series.map((s) => [s.color, s.nombre, s.puntos.find((p) => p.x === cercano)?.y])
+      .filter((f) => f[2] !== null && f[2] !== undefined).map(([c, n, v]) => [c, n, formatoY(v)]);
+    tip.mostrar(x(cercano), m.arriba + 10, tituloTip(cercano), filas);
+  });
+  zona.addEventListener("pointerleave", () => { guia.setAttribute("visibility", "hidden"); tip.ocultar(); });
+  capas.push(guia, zona);
+  const tipActual = contenedor.querySelector(".tooltip");
+  vaciar(contenedor, svg("svg", { viewBox: `0 0 ${ancho} ${alto}`, width: ancho, height: alto, role: "img" }, ...capas), tipActual);
+}
+
+/**
+ * Diagramas de caja horizontales (cuartiles). grupos: [{nombre, color, perfil:
+ * {minimo, q1, mediana, q3, maximo, cerca_superior}, atipicos: [], marca: valor a resaltar}]
+ */
+export function cajas(contenedor, grupos, { formato = (v) => numero(v), log = false } = {}) {
+  const ancho = Math.max(320, contenedor.clientWidth);
+  const etiqueta = Math.min(130, ancho * 0.3);
+  const fila = 58;
+  const alto = grupos.length * fila + 30;
+  const valores = grupos.flatMap((g) => [g.perfil.minimo, g.perfil.maximo, g.marca ?? g.perfil.minimo]).filter((v) => v > 0 || !log);
+  const f = log ? Math.log10 : (v) => v;
+  const [a, b] = [f(Math.min(...valores)), f(Math.max(...valores))];
+  const x = (v) => etiqueta + 10 + ((f(Math.max(v, log ? 1 : -Infinity)) - a) / Math.max(b - a, 1e-9)) * (ancho - etiqueta - 30);
+  const capas = [];
+  grupos.forEach((g, i) => {
+    const p = g.perfil;
+    const yc = i * fila + 26;
+    const tope = Math.min(p.maximo, p.cerca_superior);
+    capas.push(
+      svg("text", { class: "etiqueta-barra", x: etiqueta, y: yc + 4, "text-anchor": "end", text: g.nombre }),
+      svg("line", { x1: x(p.minimo), x2: x(tope), y1: yc, y2: yc, stroke: "var(--tinta-3)", "stroke-width": 1.5 }),
+      svg("line", { x1: x(p.minimo), x2: x(p.minimo), y1: yc - 8, y2: yc + 8, stroke: "var(--tinta-3)", "stroke-width": 1.5 }),
+      svg("line", { x1: x(tope), x2: x(tope), y1: yc - 8, y2: yc + 8, stroke: "var(--tinta-3)", "stroke-width": 1.5 }),
+      svg("rect", { x: x(p.q1), y: yc - 13, width: Math.max(2, x(p.q3) - x(p.q1)), height: 26, rx: 4, fill: g.color, "fill-opacity": 0.22,
+        stroke: g.color, "stroke-width": 1.5 }),
+      svg("line", { x1: x(p.mediana), x2: x(p.mediana), y1: yc - 13, y2: yc + 13, stroke: g.color, "stroke-width": 3 }),
+      svg("line", { x1: x(p.cerca_superior), x2: x(p.cerca_superior), y1: yc - 18, y2: yc + 18, stroke: "var(--critico)",
+        "stroke-width": 1, "stroke-dasharray": "3 3" }));
+    for (const atipico of g.atipicos || []) {
+      capas.push(svg("circle", { cx: x(atipico), cy: yc, r: 4, fill: "var(--papel)", stroke: "var(--critico)", "stroke-width": 1.5 }));
+    }
+    if (g.marca !== undefined && g.marca !== null) {
+      capas.push(svg("path", { d: `M${x(g.marca)},${yc - 20} l-6,-9 h12 z`, fill: "var(--tinta)" }));
+      capas.push(svg("text", { class: "valor", x: x(g.marca), y: yc - 31, "text-anchor": "middle", text: formato(g.marca) }));
+    }
+    capas.push(svg("text", { class: "tick", x: x(p.q1), y: yc + 28, "text-anchor": "middle", text: `Q1 ${formato(p.q1)}` }),
+      svg("text", { class: "tick", x: x(p.q3), y: yc + 28, "text-anchor": "middle", text: `Q3 ${formato(p.q3)}` }));
+  });
+  vaciar(contenedor, svg("svg", { viewBox: `0 0 ${ancho} ${alto}`, width: ancho, height: alto, role: "img",
+    "aria-label": grupos.map((g) => `${g.nombre}: Q1 ${formato(g.perfil.q1)}, mediana ${formato(g.perfil.mediana)}, Q3 ${formato(g.perfil.q3)}`).join(". ") }, ...capas));
+}

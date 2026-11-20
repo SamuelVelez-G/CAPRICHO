@@ -75,7 +75,7 @@
           <div><h2 class="tarjeta__titulo">Productos</h2><p class="tarjeta__sub">GET /api/productos?todos=1</p></div>
           <button class="boton boton--sm boton--contorno" id="nuevo-producto" type="button">{{ icono("mas") }} Nuevo</button>
         </div>
-        <div class="tabla-caja"><table class="tabla"><thead><tr><th>#</th><th>Nombre</th><th>Categoría</th><th class="num">Precio</th><th>Activo</th><th></th></tr></thead><tbody id="t-productos"></tbody></table></div>
+        <div class="tabla-caja"><table class="tabla"><thead><tr><th>#</th><th>Nombre</th><th>Categoría</th><th class="num">Precio</th><th class="num">Stock</th><th>Activo</th><th></th></tr></thead><tbody id="t-productos"></tbody></table></div>
       </div>
       <div class="tarjeta">
         <h2 class="tarjeta__titulo" id="titulo-producto">Nuevo producto (POST)</h2>
@@ -83,7 +83,12 @@
           <div class="campo" data-campo="nombre"><label for="p-nombre">Nombre</label><input id="p-nombre" name="nombre" type="text" maxlength="60"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
           <div class="campo" data-campo="descripcion"><label for="p-desc">Descripción</label><input id="p-desc" name="descripcion" type="text" maxlength="200"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
           <div class="fila-campos">
-            <div class="campo" data-campo="categoria"><label for="p-cat">Categoría</label><select id="p-cat" name="categoria"><option>GRANIZADO</option><option>ADICION</option></select><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="categoria_id"><label for="p-cat">Categoría</label><select id="p-cat" name="categoria_id"></select><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="tipo"><label for="p-tipo">Cómo se vende</label><select id="p-tipo" name="tipo"><option value="GRANIZADO">Granizado</option><option value="ADICION">Adición</option><option value="OTRO">Solo</option></select><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+          </div>
+          <div class="fila-campos">
+            <div class="campo" data-campo="stock"><label for="p-stock">Inventario</label><input id="p-stock" name="stock" type="number" min="0" value="0"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
+            <div class="campo" data-campo="stock_minimo"><label for="p-minimo">Mínimo</label><input id="p-minimo" name="stock_minimo" type="number" min="0" value="10"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
             <div class="campo" data-campo="precio"><label for="p-precio">Precio</label><input id="p-precio" name="precio" type="number" step="100" min="500"><span class="campo__error">{{ icono("alerta") }}<span></span></span></div>
           </div>
           <div class="fila-campos">
