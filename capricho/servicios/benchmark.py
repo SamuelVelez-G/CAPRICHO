@@ -259,25 +259,27 @@ def correr(db, tipo="RAPIDO", tamanos=None, al_avanzar=None):
 
 
 def _mejora(variantes):
-    """Cuántas veces más rápida es la mejor variante frente a la peor en el
-    tamaño más grande que ambas alcanzaron (o con el tiempo estimado)."""
-    def tiempo(v, n):
-        punto = next((p for p in v["puntos"] if p["n"] == n), None)
-        if punto is None:
-            return None, False
-        return (punto["estimado_ms"], True) if punto.get("omitido") else (punto["ms"], False)
+    """Cuántas veces más rápida es la mejor variante frente a la peor, en el
+    tamaño más grande donde la mejor SÍ se midió (la peor puede ser estimada)."""
+    def punto(v, n):
+        return next((p for p in v["puntos"] if p["n"] == n), None)
 
-    n = max(p["n"] for p in variantes[0]["puntos"])
-    tiempos = [(v, *tiempo(v, n)) for v in variantes]
-    tiempos = [t for t in tiempos if t[1]]
-    if len(tiempos) < 2:
-        return None
-    lenta = max(tiempos, key=lambda t: t[1])
-    rapida = min(tiempos, key=lambda t: t[1])
-    return {"n": n, "lenta": lenta[0]["nombre"], "lenta_complejidad": lenta[0]["complejidad"],
-            "rapida": rapida[0]["nombre"], "rapida_complejidad": rapida[0]["complejidad"],
-            "lenta_ms": round(lenta[1], 2), "rapida_ms": round(rapida[1], 3), "estimado": lenta[2],
-            "veces": round(lenta[1] / max(rapida[1], 1e-4), 1)}
+    tamanos = sorted({p["n"] for v in variantes for p in v["puntos"]}, reverse=True)
+    for n in tamanos:
+        medidas = [(v, punto(v, n)["ms"]) for v in variantes if punto(v, n) and not punto(v, n).get("omitido")]
+        if not medidas:
+            continue
+        rapida = min(medidas, key=lambda t: t[1])
+        todas = [(v, p["estimado_ms"] if p.get("omitido") else p["ms"], bool(p.get("omitido")))
+                 for v in variantes if (p := punto(v, n))]
+        lenta = max(todas, key=lambda t: t[1])
+        if lenta[0] is rapida[0]:
+            return None
+        return {"n": n, "lenta": lenta[0]["nombre"], "lenta_complejidad": lenta[0]["complejidad"],
+                "rapida": rapida[0]["nombre"], "rapida_complejidad": rapida[0]["complejidad"],
+                "lenta_ms": round(lenta[1], 2), "rapida_ms": round(rapida[1], 3), "estimado": lenta[2],
+                "veces": round(lenta[1] / max(rapida[1], 1e-4), 1)}
+    return None
 
 
 def guardar(db, resultado):

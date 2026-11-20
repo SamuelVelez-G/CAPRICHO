@@ -49,7 +49,9 @@ async function apiEstatica(metodo, url) {
 
 const PAGINAS_ESTATICAS = { "/": "index.html", "/laboratorio": "laboratorio.html", "/ia": "ia.html", "/dashboard": "dashboard.html",
   "/operacion": "operacion.html", "/pagar": "pagar.html", "/ingresar": "ingresar.html", "/registro": "registro.html",
-  "/mis-pedidos": "index.html" };
+  "/mis-pedidos": "index.html", "/panel": "panel.html", "/en-vivo": "en-vivo.html", "/transferir": "transferir.html",
+  "/gestion": "gestion.html", "/calidad": "calidad.html", "/integridad": "integridad.html", "/algoritmos": "algoritmos.html",
+  "/estadistica": "estadistica.html" };
 
 if (ESTATICO) {
   // Los enlaces que el JavaScript arma con rutas del servidor ("/#arma",

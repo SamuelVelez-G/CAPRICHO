@@ -128,13 +128,17 @@ const formProducto = document.getElementById("form-producto");
 let productoActual = null;
 
 async function cargarProductos() {
-  const { ok, datos } = await api("GET", "/api/productos?todos=1");
+  const [{ ok, datos }, categorias] = await Promise.all([api("GET", "/api/productos?todos=1"), api("GET", "/api/categorias?todas=1")]);
   if (!ok) return toast(datos.error, "error");
+  if (categorias.ok && !formProducto.categoria_id.options.length) {
+    vaciar(formProducto.categoria_id, ...categorias.datos.categorias.map((c) => el("option", { value: c.id, text: c.nombre })));
+  }
   vaciar(document.getElementById("t-productos"), ...datos.productos.map((p) => el("tr", {},
     el("td", { class: "num", text: p.id }),
     el("td", { text: p.nombre }),
     el("td", { text: p.categoria }),
     el("td", { class: "num", text: dinero(p.precio) }),
+    el("td", { class: "num", text: p.stock }),
     el("td", {}, insignia(p.activo ? "ACTIVO" : "INACTIVO")),
     el("td", {}, el("button", { class: "boton boton--xs boton--contorno", type: "button", onClick: () => editar(p) }, "Editar")))));
 }
@@ -144,8 +148,11 @@ function leerProducto() {
   return {
     nombre: formProducto.nombre.value,
     descripcion: formProducto.descripcion.value,
-    categoria: formProducto.categoria.value,
+    categoria_id: Number(formProducto.categoria_id.value),
+    tipo: formProducto.tipo.value,
     precio: formProducto.precio.value === "" ? null : Number(formProducto.precio.value),
+    stock: formProducto.stock.value === "" ? null : Number(formProducto.stock.value),
+    stock_minimo: formProducto.stock_minimo.value === "" ? null : Number(formProducto.stock_minimo.value),
     onzas: onzas === "" ? null : Number(onzas),
     imagen: formProducto.imagen.value || null,
     activo: formProducto.activo.checked,
@@ -157,7 +164,10 @@ function editar(producto) {
   document.getElementById("titulo-producto").textContent = `Editar #${producto.id} (PUT / PATCH / DELETE)`;
   formProducto.nombre.value = producto.nombre;
   formProducto.descripcion.value = producto.descripcion;
-  formProducto.categoria.value = producto.categoria;
+  formProducto.categoria_id.value = producto.categoria_id;
+  formProducto.tipo.value = producto.tipo;
+  formProducto.stock.value = producto.stock;
+  formProducto.stock_minimo.value = producto.stock_minimo;
   formProducto.precio.value = producto.precio;
   formProducto.onzas.value = producto.onzas ?? "";
   formProducto.imagen.value = producto.imagen ?? "";

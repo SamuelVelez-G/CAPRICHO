@@ -1,6 +1,6 @@
 # Informe del análisis experimental de algoritmos
 
-Generado por `herramientas/benchmark.py` el 2026-11-20 14:52 en AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD · Python 3.12.10 · Windows (29.0 s).
+Generado por `herramientas/benchmark.py` el 2026-11-20 15:02 en AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD · Python 3.12.10 · Windows (33.6 s).
 
 Cada problema se resolvió de varias formas sobre datos reales de la base de Capricho (replicados para los tamaños grandes). Se midió el mejor de varios intentos con `time.perf_counter`, se contaron las operaciones básicas y se verificó que todas las variantes dieran el mismo resultado. La **pendiente** es el exponente estimado con una regresión lineal de log(tiempo) contra log(n): ≈ 0 es constante, ≈ 1 lineal, ≈ 2 cuadrático.
 
@@ -10,11 +10,11 @@ Buscar 200 idTxn entre n transacciones (10 % no existen). Todas las variantes di
 
 | Variante | Teoría | n = 100 | n = 250 | n = 500 | n = 1.000 | n = 2.500 | n = 5.000 | n = 10.000 | n = 25.000 | n = 50.000 | Pendiente | R² |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Búsqueda lineal | O(n) | 315 µs | 784 µs | 1.59 ms | 2.93 ms | 8.12 ms | 15.72 ms | 29.61 ms | 80.15 ms | 155.26 ms | 1.0 | 1.0 |
-| Búsqueda binaria (lista ordenada) | O(log n) | 107 µs | 143 µs | 171 µs | 189 µs | 227 µs | 246 µs | 274 µs | 294 µs | 343 µs | 0.17 | 0.969 |
-| Índice hash (diccionario) | O(1) | 12 µs | 12 µs | 13 µs | 13 µs | 13 µs | 13 µs | 14 µs | 19 µs | 13 µs | 0.04 | 0.335 |
+| Búsqueda lineal | O(n) | 321 µs | 805 µs | 1.77 ms | 2.95 ms | 8.17 ms | 16.12 ms | 28.96 ms | 85.56 ms | 166.10 ms | 1.0 | 0.999 |
+| Búsqueda binaria (lista ordenada) | O(log n) | 111 µs | 140 µs | 175 µs | 198 µs | 214 µs | 257 µs | 281 µs | 316 µs | 351 µs | 0.18 | 0.977 |
+| Índice hash (diccionario) | O(1) | 14 µs | 13 µs | 13 µs | 13 µs | 13 µs | 13 µs | 13 µs | 13 µs | 26 µs | 0.06 | 0.287 |
 
-**Mejora:** con n = 50.000. Índice hash (diccionario) (O(1)) tarda 13 µs y Búsqueda lineal (O(n)) tarda 155.26 ms: **12.225 veces más rápido**.
+**Mejora:** con n = 50.000. Índice hash (diccionario) (O(1)) tarda 26 µs y Búsqueda lineal (O(n)) tarda 166.10 ms: **6.488 veces más rápido**.
 
 ## Suma de ventas
 
@@ -22,11 +22,11 @@ Total vendido en n transacciones. Todas las variantes dieron el mismo resultado.
 
 | Variante | Teoría | n = 100 | n = 250 | n = 500 | n = 1.000 | n = 2.500 | n = 5.000 | n = 10.000 | n = 25.000 | n = 50.000 | Pendiente | R² |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Bucle for | O(n) | 3 µs | 6 µs | 12 µs | 24 µs | 60 µs | 120 µs | 238 µs | 601 µs | 1.20 ms | 0.98 | 1.0 |
-| Divide y vencerás | O(n) | 39 µs | 100 µs | 202 µs | 412 µs | 1.04 ms | 2.09 ms | 4.12 ms | 10.31 ms | 20.96 ms | 1.01 | 1.0 |
-| sum() de Python (en C) | O(n) | 1 µs | 2 µs | 3 µs | 6 µs | 13 µs | 26 µs | 51 µs | 129 µs | 257 µs | 0.97 | 0.999 |
+| Bucle for | O(n) | 3 µs | 6 µs | 12 µs | 24 µs | 61 µs | 122 µs | 244 µs | 612 µs | 1.22 ms | 0.98 | 1.0 |
+| Divide y vencerás | O(n) | 40 µs | 101 µs | 207 µs | 424 µs | 1.06 ms | 2.15 ms | 4.20 ms | 10.50 ms | 21.48 ms | 1.01 | 1.0 |
+| sum() de Python (en C) | O(n) | 1 µs | 2 µs | 4 µs | 7 µs | 17 µs | 34 µs | 69 µs | 170 µs | 338 µs | 0.96 | 1.0 |
 
-**Mejora:** con n = 50.000. sum() de Python (en C) (O(n)) tarda 257 µs y Divide y vencerás (O(n)) tarda 20.96 ms: **81 veces más rápido**.
+**Mejora:** con n = 50.000. sum() de Python (en C) (O(n)) tarda 338 µs y Divide y vencerás (O(n)) tarda 21.48 ms: **64 veces más rápido**.
 
 ## Conteo de pedidos por cliente
 
@@ -34,11 +34,11 @@ Cuántos pedidos hizo cada cliente (n pedidos). Todas las variantes dieron el mi
 
 | Variante | Teoría | n = 100 | n = 250 | n = 500 | n = 1.000 | n = 2.500 | n = 5.000 | n = 10.000 | n = 25.000 | n = 50.000 | Pendiente | R² |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Doble ciclo | O(n²) | 76 µs | 417 µs | 1.56 ms | 6.69 ms | 42.30 ms | 172.26 ms | 705.60 ms | ~4.41 s* | ~17.64 s* | 2.0 | 1.0 |
-| Ordenar y agrupar | O(n log n) | 12 µs | 32 µs | 69 µs | 166 µs | 499 µs | 1.07 ms | 2.23 ms | 6.22 ms | 14.41 ms | 1.15 | 1.0 |
-| Diccionario | O(n) | 6 µs | 15 µs | 31 µs | 64 µs | 168 µs | 344 µs | 673 µs | 1.78 ms | 3.87 ms | 1.03 | 1.0 |
+| Doble ciclo | O(n²) | 78 µs | 435 µs | 1.55 ms | 6.88 ms | 44.01 ms | 197.76 ms | 937.51 ms | ~5.86 s* | ~23.44 s* | 2.04 | 0.999 |
+| Ordenar y agrupar | O(n log n) | 11 µs | 32 µs | 68 µs | 172 µs | 520 µs | 1.80 ms | 2.62 ms | 9.02 ms | 21.48 ms | 1.23 | 0.997 |
+| Diccionario | O(n) | 6 µs | 26 µs | 48 µs | 71 µs | 159 µs | 388 µs | 1.25 ms | 2.19 ms | 5.69 ms | 1.06 | 0.99 |
 
-**Mejora:** con n = 50.000. Diccionario (O(n)) tarda 3.87 ms y Doble ciclo (O(n²)) tardaría 17.64 s: **4.556 veces más rápido**.
+**Mejora:** con n = 50.000. Diccionario (O(n)) tarda 5.69 ms y Doble ciclo (O(n²)) tardaría 23.44 s: **4.117 veces más rápido**.
 
 ## Ordenamiento simple
 
@@ -46,11 +46,11 @@ Ordenar n montos de menor a mayor. Todas las variantes dieron el mismo resultado
 
 | Variante | Teoría | n = 100 | n = 250 | n = 500 | n = 1.000 | n = 2.500 | n = 5.000 | n = 10.000 | n = 25.000 | n = 50.000 | Pendiente | R² |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Burbuja | O(n²) | 273 µs | 1.84 ms | 7.15 ms | 32.02 ms | 233.75 ms | 932.88 ms | ~3.73 s* | ~23.32 s* | ~93.29 s* | 2.09 | 1.0 |
-| Selección | O(n²) | 167 µs | 987 µs | 4.02 ms | 16.37 ms | 99.99 ms | 402.56 ms | 1.59 s | ~9.95 s* | ~39.80 s* | 1.99 | 1.0 |
-| Inserción | O(n²) | 199 µs | 1.19 ms | 4.54 ms | 19.82 ms | 123.69 ms | 502.43 ms | 2.02 s | ~12.63 s* | ~50.53 s* | 2.01 | 1.0 |
+| Burbuja | O(n²) | 266 µs | 1.85 ms | 7.82 ms | 42.07 ms | 270.67 ms | 1.12 s | ~4.50 s* | ~28.12 s* | ~112.48 s* | 2.15 | 1.0 |
+| Selección | O(n²) | 179 µs | 1.09 ms | 4.92 ms | 20.27 ms | 123.57 ms | 544.12 ms | 2.15 s | ~13.45 s* | ~53.79 s* | 2.05 | 1.0 |
+| Inserción | O(n²) | 179 µs | 1.33 ms | 4.67 ms | 24.08 ms | 152.91 ms | 649.59 ms | 2.64 s | ~16.51 s* | ~66.05 s* | 2.09 | 1.0 |
 
-**Mejora:** con n = 50.000. Selección (O(n²)) tarda 39.80 s y Burbuja (O(n²)) tardaría 93.29 s: **2 veces más rápido**.
+**Mejora:** con n = 10.000. Selección (O(n²)) tarda 2.15 s y Burbuja (O(n²)) tardaría 4.50 s: **2 veces más rápido**.
 
 ## Ordenamiento por fecha
 
@@ -58,13 +58,13 @@ Ordenar cronológicamente n transacciones que llegan en lote. Todas las variante
 
 | Variante | Teoría | n = 100 | n = 250 | n = 500 | n = 1.000 | n = 2.500 | n = 5.000 | n = 10.000 | n = 25.000 | n = 50.000 | Pendiente | R² |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Inserción | O(n²) | 257 µs | 1.61 ms | 6.23 ms | 24.54 ms | 151.94 ms | 618.83 ms | 2.55 s | ~15.94 s* | ~63.77 s* | 1.99 | 1.0 |
-| Merge sort (divide y vencerás) | O(n log n) | 134 µs | 385 µs | 820 µs | 1.88 ms | 5.17 ms | 10.98 ms | 24.56 ms | 66.37 ms | 149.48 ms | 1.13 | 1.0 |
-| Quicksort | O(n log n) | 96 µs | 248 µs | 620 µs | 1.24 ms | 3.46 ms | 7.81 ms | 17.28 ms | 48.70 ms | 115.67 ms | 1.14 | 1.0 |
-| Heapsort | O(n log n) | 29 µs | 78 µs | 180 µs | 395 µs | 1.18 ms | 2.73 ms | 6.18 ms | 19.64 ms | 53.10 ms | 1.2 | 0.999 |
-| Timsort (sorted) | O(n log n) | 7 µs | 20 µs | 46 µs | 116 µs | 325 µs | 756 µs | 1.71 ms | 4.77 ms | 12.07 ms | 1.2 | 1.0 |
+| Inserción | O(n²) | 245 µs | 1.63 ms | 6.00 ms | 31.43 ms | 202.81 ms | 830.81 ms | ~3.32 s* | ~20.77 s* | ~83.08 s* | 2.09 | 0.999 |
+| Merge sort (divide y vencerás) | O(n log n) | 248 µs | 648 µs | 871 µs | 1.94 ms | 5.50 ms | 13.32 ms | 26.51 ms | 84.35 ms | 201.02 ms | 1.08 | 0.993 |
+| Quicksort | O(n log n) | 95 µs | 313 µs | 638 µs | 1.87 ms | 4.75 ms | 10.37 ms | 19.07 ms | 60.71 ms | 151.81 ms | 1.16 | 0.998 |
+| Heapsort | O(n log n) | 28 µs | 79 µs | 174 µs | 550 µs | 1.70 ms | 3.01 ms | 7.08 ms | 33.81 ms | 100.23 ms | 1.3 | 0.995 |
+| Timsort (sorted) | O(n log n) | 7 µs | 35 µs | 46 µs | 116 µs | 338 µs | 827 µs | 2.22 ms | 7.53 ms | 15.77 ms | 1.23 | 0.995 |
 
-**Mejora:** con n = 50.000. Timsort (sorted) (O(n log n)) tarda 12.07 ms y Inserción (O(n²)) tardaría 63.77 s: **5.282 veces más rápido**.
+**Mejora:** con n = 50.000. Timsort (sorted) (O(n log n)) tarda 15.77 ms y Inserción (O(n²)) tardaría 83.08 s: **5.269 veces más rápido**.
 
 ## Ranking de ítems más vendidos
 
@@ -72,11 +72,11 @@ Top 10 de productos en n líneas de pedido. Todas las variantes dieron el mismo 
 
 | Variante | Teoría | n = 100 | n = 250 | n = 500 | n = 1.000 | n = 2.500 | n = 5.000 | n = 10.000 | n = 25.000 | n = 50.000 | Pendiente | R² |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Doble ciclo | O(n²) | 398 µs | 2.29 ms | 9.13 ms | 36.32 ms | 236.07 ms | 884.66 ms | ~3.54 s* | ~22.12 s* | ~88.47 s* | 1.98 | 1.0 |
-| Ordenar y agrupar | O(n log n) | 16 µs | 41 µs | 87 µs | 185 µs | 475 µs | 1.01 ms | 2.05 ms | 5.25 ms | 11.39 ms | 1.05 | 1.0 |
-| Diccionario + heap | O(n) | 8 µs | 18 µs | 34 µs | 65 µs | 173 µs | 336 µs | 676 µs | 1.71 ms | 3.40 ms | 0.98 | 0.999 |
+| Doble ciclo | O(n²) | 360 µs | 2.46 ms | 10.09 ms | 43.43 ms | 305.71 ms | 1.16 s | ~4.63 s* | ~28.93 s* | ~115.71 s* | 2.07 | 1.0 |
+| Ordenar y agrupar | O(n log n) | 16 µs | 42 µs | 97 µs | 208 µs | 527 µs | 1.09 ms | 2.17 ms | 8.13 ms | 15.84 ms | 1.11 | 0.999 |
+| Diccionario + heap | O(n) | 8 µs | 17 µs | 43 µs | 80 µs | 170 µs | 331 µs | 781 µs | 1.83 ms | 4.39 ms | 1.01 | 0.998 |
 
-**Mejora:** con n = 50.000. Diccionario + heap (O(n)) tarda 3.40 ms y Doble ciclo (O(n²)) tardaría 88.47 s: **25.992 veces más rápido**.
+**Mejora:** con n = 50.000. Diccionario + heap (O(n)) tarda 4.39 ms y Doble ciclo (O(n²)) tardaría 115.71 s: **26.332 veces más rápido**.
 
 ## Normalizar y unificar nombres
 
@@ -84,11 +84,11 @@ Cuántos clientes o ítems distintos hay en n nombres mal escritos. Todas las va
 
 | Variante | Teoría | n = 100 | n = 250 | n = 500 | n = 1.000 | n = 2.500 | n = 5.000 | n = 10.000 | n = 25.000 | n = 50.000 | Pendiente | R² |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Comparar por pares | O(n²) | 390 µs | 1.32 ms | 4.55 ms | 16.96 ms | 105.37 ms | 434.81 ms | 1.75 s | ~10.91 s* | ~43.64 s* | 1.86 | 0.996 |
-| Ordenar claves | O(n log n) | 317 µs | 814 µs | 1.72 ms | 3.53 ms | 9.08 ms | 18.76 ms | 37.96 ms | 98.25 ms | 193.62 ms | 1.03 | 1.0 |
-| Conjunto de claves | O(n) | 306 µs | 781 µs | 1.70 ms | 3.38 ms | 8.75 ms | 18.43 ms | 37.03 ms | 92.57 ms | 200.51 ms | 1.04 | 1.0 |
+| Comparar por pares | O(n²) | 408 µs | 1.40 ms | 4.97 ms | 22.42 ms | 133.52 ms | 604.46 ms | 2.60 s | ~16.23 s* | ~64.91 s* | 1.94 | 0.995 |
+| Ordenar claves | O(n log n) | 511 µs | 829 µs | 2.45 ms | 3.78 ms | 11.62 ms | 25.72 ms | 52.43 ms | 145.74 ms | 351.82 ms | 1.07 | 0.995 |
+| Conjunto de claves | O(n) | 563 µs | 930 µs | 2.33 ms | 3.95 ms | 12.29 ms | 19.99 ms | 58.13 ms | 144.40 ms | 321.22 ms | 1.05 | 0.994 |
 
-**Mejora:** con n = 50.000. Ordenar claves (O(n log n)) tarda 193.62 ms y Comparar por pares (O(n²)) tardaría 43.64 s: **225 veces más rápido**.
+**Mejora:** con n = 50.000. Conjunto de claves (O(n)) tarda 321.22 ms y Comparar por pares (O(n²)) tardaría 64.91 s: **202 veces más rápido**.
 
 ## Ventana deslizante (ráfagas)
 
@@ -96,10 +96,10 @@ Transacciones con 5 o más del mismo usuario en menos de 1 s (algoritmo crítico
 
 | Variante | Teoría | n = 100 | n = 250 | n = 500 | n = 1.000 | n = 2.500 | n = 5.000 | n = 10.000 | n = 25.000 | n = 50.000 | Pendiente | R² |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Doble ciclo | O(n²) | 310 µs | 1.97 ms | 7.59 ms | 31.09 ms | 204.13 ms | 780.03 ms | ~3.12 s* | ~19.50 s* | ~78.00 s* | 2.01 | 1.0 |
-| Ordenar + dos punteros | O(n log n) | 20 µs | 44 µs | 88 µs | 174 µs | 420 µs | 849 µs | 1.66 ms | 4.29 ms | 9.65 ms | 0.99 | 0.999 |
-| Deque por usuario (en vivo) | O(n) | 26 µs | 63 µs | 130 µs | 252 µs | 642 µs | 1.30 ms | 2.60 ms | 6.68 ms | 13.01 ms | 1.0 | 1.0 |
+| Doble ciclo | O(n²) | 408 µs | 2.35 ms | 11.99 ms | 39.58 ms | 290.90 ms | 1.07 s | ~4.26 s* | ~26.63 s* | ~106.52 s* | 2.02 | 0.999 |
+| Ordenar + dos punteros | O(n log n) | 20 µs | 46 µs | 90 µs | 178 µs | 459 µs | 938 µs | 1.97 ms | 5.03 ms | 11.59 ms | 1.02 | 0.999 |
+| Deque por usuario (en vivo) | O(n) | 27 µs | 91 µs | 190 µs | 385 µs | 630 µs | 1.45 ms | 2.99 ms | 8.10 ms | 15.36 ms | 0.99 | 0.995 |
 
-**Mejora:** con n = 50.000. Ordenar + dos punteros (O(n log n)) tarda 9.65 ms y Doble ciclo (O(n²)) tardaría 78.00 s: **8.084 veces más rápido**.
+**Mejora:** con n = 50.000. Ordenar + dos punteros (O(n log n)) tarda 11.59 ms y Doble ciclo (O(n²)) tardaría 106.52 s: **9.193 veces más rápido**.
 
 \* Tiempo estimado: con ese tamaño la variante tardaría demasiado y no se corrió; se proyectó con su complejidad.

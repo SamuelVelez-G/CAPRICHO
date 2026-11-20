@@ -279,7 +279,7 @@ const ESCENARIOS = [
     esperado: "409: el servidor recalcula y registra PRECIO_MANIPULADO (necesita sesión)",
     async correr() {
       const { datos } = await api("GET", "/api/productos");
-      const granizado = datos.productos.find((p) => p.categoria === "GRANIZADO");
+      const granizado = datos.productos.find((p) => p.tipo === "GRANIZADO");
       await enviar("/api/pedidos", { items: [{ producto_id: granizado.id, sabor: "Capuchino", cantidad: 1, adiciones: [], precio_unitario: 100 }],
         tipo_entrega: "RECOGER", barrio: null, direccion: null, metodo_pago: "Nequi", total: 100 });
     },

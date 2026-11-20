@@ -4,10 +4,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="csrf-token" content="B3YikFLmLq7I60ezKADidzyDYekWN46z1MPxU3CWAO0">
+  <meta name="csrf-token" content="ZnY_4WTe8fu72-hf6wfBQB1w9DkcWMXIfJZGbyeaQHI">
   <meta name="description" content="Capricho, granizado de café artesanal en Aranjuez, Medellín. Pide a domicilio o recoge en tienda.">
   <meta name="theme-color" content="#75383f">
-  <title>Detector con IA · Capricho</title>
+  <title>Modelos de IA · Capricho</title>
   <link rel="icon" type="image/png" href="static/img/favicon.png">
   <link rel="apple-touch-icon" href="static/img/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,10 +30,7 @@
         <a href="index.html#domicilios">Domicilios</a>
         <a href="laboratorio.html" >Laboratorio</a>
         <a href="ia.html" aria-current="page">IA</a>
-        
-          <a href="dashboard.html" >Dashboard</a>
-          <a href="operacion.html" >Operación</a>
-        
+        <a href="transferir.html" >Transferir</a>
       </nav>
       <div class="barra__acciones">
         
@@ -54,21 +51,150 @@
   transacciones ni pagar. Para probar el detector en vivo ejecuta el proyecto con <code>python run.py</code>.</span>
 </div></div>
 
+  
+  
+  <nav class="subnav" aria-label="Módulos del personal">
+    <div class="contenedor subnav__fila">
+      <span class="subnav__rol">Administración</span>
+      
+        <a href="panel.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#grafico"></use></svg>Panel</a>
+      
+        <a href="en-vivo.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#rayo"></use></svg>En vivo</a>
+      
+        <a href="gestion.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tienda"></use></svg>Gestión</a>
+      
+        <a href="dashboard.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#escudo"></use></svg>Antifraude</a>
+      
+        <a href="calidad.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#matraz"></use></svg>Calidad</a>
+      
+        <a href="integridad.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#candado"></use></svg>Integridad</a>
+      
+        <a href="estadistica.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tabla"></use></svg>Estadística</a>
+      
+        <a href="algoritmos.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#reloj"></use></svg>Algoritmos</a>
+      
+        <a href="operacion.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#cola"></use></svg>Operación</a>
+      
+    </div>
+  </nav>
+  
+
   <main id="contenido">
     
 <section class="panel-cabeza">
   <div class="contenedor">
-    <p class="eyebrow">Keras · autoencoder · aprendizaje sin etiquetas</p>
-    <h1>Detector de fraude con IA</h1>
-    <p>Las reglas solo atrapan lo que programamos. Esta red neuronal aprende cómo compran normalmente los clientes de Capricho y avisa cuando una compra no se parece a eso, aunque no rompa ninguna regla.</p>
+    <p class="eyebrow">Keras + TensorFlow · inteligencia artificial sin LLM</p>
+    <h1>Modelos de inteligencia artificial</h1>
+    <p>Cuatro redes neuronales, cada una responde una pregunta: ¿esta operación es fraudulenta? (aprende de todos los clientes, sirve con clientes nuevos), ¿cuánto debería pagar este cliente?, ¿esta compra se parece a sus hábitos? y ¿cuánto se va a vender la próxima semana? Las reglas solo atrapan lo que programamos; las redes aprenden de los datos.</p>
   </div>
 </section>
 
 <div class="contenedor dash" id="ia">
   <div class="aviso aviso--alerta" id="ia-no-disponible" hidden><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><p></p></div>
 
+  <div class="modelos-resumen" id="modelos-resumen"></div>
+
+  <!-- ===================== CLASIFICADOR ===================== -->
   <section class="tarjeta">
-    <h2 class="tarjeta__titulo">Cómo funciona</h2>
+    <p class="eyebrow eyebrow--oscuro">Modelo 1 · aprendizaje supervisado</p>
+    <h2 class="tarjeta__titulo">Clasificador: ¿normal o fraudulenta?</h2>
+    <ol class="pasos-ia">
+      <li><strong>1. Datos etiquetados</strong><span>90 días de una población simulada de 800 clientes con hábitos reales de Capricho y 7 tipos de fraude marcados (<code class="mono">ia/simulador.py</code>).</span></li>
+      <li><strong>2. 23 variables por operación</strong><span>Generales (hora, monto frente a cualquier cliente, método, firma, frecuencia, antigüedad) y personales (frente a su propio historial, neutras si es nuevo).</span></li>
+      <li><strong>3. Red de Keras</strong><span>Normalización → Dense 64 → Dropout → Dense 32 → Dropout → 1 neurona sigmoide: la probabilidad de fraude.</span></li>
+      <li><strong>4. TensorFlow</strong><span><code class="mono">tf.data</code> mezcla y aumenta los fraudes (son pocos) con ruido gaussiano; el modelo se guarda y se vuelve a cargar (<code class="mono">.keras</code>).</span></li>
+    </ol>
+    <div class="kpis kpis--5 separado" id="clasificador-kpis"></div>
+  </section>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">¿Qué pasa con un cliente nuevo?</h2>
+    <p class="tarjeta__sub">La observación de la exposición: si el detector solo compara con el historial del cliente, con alguien nuevo no tiene con qué comparar. El clasificador aprendió de toda la población. Prueba con días que ningún modelo vio al entrenar:</p>
+    <div id="t-comparacion"></div>
+    <p class="nota">Detecta (recall) = de los fraudes, cuántos encontró. Precisión = de lo que marcó, cuánto era fraude. Falsas alarmas = compras legítimas marcadas.</p>
+  </section>
+
+  <div class="rejilla rejilla--2">
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">Por tipo de operación</h2>
+      <p class="tarjeta__sub">Fraudes: qué porcentaje detecta cada uno. Legítimas: qué porcentaje marca por error.</p>
+      <div id="t-tipos"></div>
+    </section>
+    <section class="tarjeta">
+      <h2 class="tarjeta__titulo">Matriz de confusión (prueba)</h2>
+      <p class="tarjeta__sub" id="sub-matriz"></p>
+      <div id="matriz"></div>
+      <h3 class="separado">Aumento de datos con TensorFlow</h3>
+      <div id="t-aumento"></div>
+      <h3 class="separado">Velocidad en vivo</h3>
+      <p id="inferencia"></p>
+    </section>
+  </div>
+
+  <div class="rejilla rejilla--2">
+    <section class="tarjeta tarjeta--grafica">
+      <h2 class="tarjeta__titulo">Curva de aprendizaje del clasificador</h2>
+      <p class="tarjeta__sub">AUC-PR por época (1 = separa perfecto). Se detiene sola cuando validación deja de mejorar (parada temprana).</p>
+      <div id="leyenda-curva-c"></div>
+      <div class="grafica" id="g-curva-clasificador"></div>
+    </section>
+    <section class="tarjeta tarjeta--grafica">
+      <h2 class="tarjeta__titulo">Probabilidad que asigna la red</h2>
+      <p class="tarjeta__sub">Operaciones de prueba por rango de probabilidad (escala logarítmica). Los fraudes se van a la derecha y las normales a la izquierda.</p>
+      <div id="leyenda-histograma-c"></div>
+      <div class="grafica" id="g-histograma-clasificador"></div>
+    </section>
+  </div>
+
+  <section class="tarjeta" id="probador-clasificador">
+    <div class="tarjeta__cabeza"><div><h2 class="tarjeta__titulo">Probador del clasificador</h2>
+      <p class="tarjeta__sub">Describe la operación y al cliente; la red responde con la probabilidad, por qué, y cuánto conocimiento general o personal usó.</p></div></div>
+    <div class="hero__acciones bloque" id="presets-clasificador"></div>
+    <div class="probador">
+      <form id="form-clasificador" class="probador__form" novalidate>
+        <div class="fila-campos">
+          <div class="campo" data-campo="valor"><label for="k-valor">Monto ($)</label><input id="k-valor" name="valor" type="number" min="100" step="500"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="hora"><label for="k-hora">Hora · <strong id="kv-hora"></strong></label><input id="k-hora" name="hora" type="range" min="0" max="23.75" step="0.25"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="metodo"><label for="k-metodo">Método</label><select id="k-metodo" name="metodo"><option>Nequi</option><option>Tarjeta</option><option>Daviplata</option><option>PSE</option><option>Efectivo</option><option>Transferencia</option></select><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="historial"><label for="k-historial">Compras anteriores (0 = nuevo)</label><input id="k-historial" name="historial" type="number" min="0" step="1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="monto_habitual"><label for="k-habitual">Su compra habitual ($)</label><input id="k-habitual" name="monto_habitual" type="number" min="100" step="500"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="proporcion_metodo"><label for="k-prop">Usa ese método · <strong id="kv-prop"></strong></label><input id="k-prop" name="proporcion_metodo" type="range" min="0" max="1" step="0.05"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo" data-campo="compras_1h"><label for="k-1h">Compras en la última hora</label><input id="k-1h" name="compras_1h" type="number" min="0" step="1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="metodos_24h"><label for="k-m24">Métodos distintos en 24 h</label><input id="k-m24" name="metodos_24h" type="number" min="1" max="6" step="1"><span class="campo__error"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span></div>
+          <div class="campo" data-campo="firma_valida"><label class="casilla"><input type="checkbox" name="firma_valida" checked> Firma válida</label></div>
+        </div>
+      </form>
+      <div class="probador__resultado" id="resultado-clasificador" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ===================== MONTO Y DEMANDA ===================== -->
+  <div class="rejilla rejilla--2">
+    <section class="tarjeta">
+      <p class="eyebrow eyebrow--oscuro">Modelo 2 · regresión</p>
+      <h2 class="tarjeta__titulo">Monto esperado</h2>
+      <p class="tarjeta__sub">¿Cuánto debería pagar este cliente a esta hora, este día y con este método? Aprende que los fines de semana se pide más (familia) y al almuerzo se piden combos. En vivo dice "esta compra es 18 veces lo esperado".</p>
+      <div id="t-monto"></div>
+    </section>
+    <section class="tarjeta tarjeta--grafica">
+      <p class="eyebrow eyebrow--oscuro">Modelo 4 · predicción de demanda</p>
+      <h2 class="tarjeta__titulo">Ventas de los próximos días</h2>
+      <p class="tarjeta__sub">Cuatro semanas que la red no vio. Mira el día de la semana, ayer, la semana pasada y el promedio de 7 días.</p>
+      <div id="leyenda-demanda"></div>
+      <div class="grafica" id="g-demanda"></div>
+      <div id="t-demanda"></div>
+    </section>
+  </div>
+
+  <!-- ===================== AUTOENCODER ===================== -->
+  <p class="eyebrow eyebrow--oscuro separado">Modelo 3 · aprendizaje sin etiquetas (primera exposición)</p>
+
+  <section class="tarjeta">
+    <h2 class="tarjeta__titulo">Autoencoder: ¿se parece a los hábitos de ESTE cliente?</h2>
     <ol class="pasos-ia">
       <li><strong>1. Llega una compra</strong><span>Al mismo endpoint de siempre: <code class="mono">POST /api/transacciones</code>.</span></li>
       <li><strong>2. Se convierte en 9 números</strong><span>Hora, monto y, sobre todo, qué tan distinta es de los hábitos de ese cliente.</span></li>
@@ -158,10 +284,11 @@
   <section class="tarjeta">
     <h2 class="tarjeta__titulo">Limitaciones (uso responsable)</h2>
     <ul class="limitaciones">
-      <li><strong>Datos de demostración.</strong> Se entrenó con 9 semanas de compras simuladas con hábitos realistas, no con clientes reales. Con datos reales hay que volver a entrenar y medir.</li>
-      <li><strong>Aprende lo que le muestres.</strong> En la primera versión el histórico traía fraudes que ninguna regla había detectado, y la red los aprendió como normales: detectaba 2 de 60. Por eso se entrena con un histórico revisado.</li>
-      <li><strong>Falsas alarmas.</strong> Por diseño, cerca del 1 al 2 % de las compras normales superan el umbral. No bloquea: marca para revisión humana.</li>
-      <li><strong>Clientes nuevos.</strong> Sin al menos 3 compras no hay hábito con qué comparar y la red decide solo con hora, monto y ritmo.</li>
+      <li><strong>Datos simulados.</strong> El clasificador se entrenó con una población simulada con los hábitos de Capricho, no con clientes reales. Con datos reales hay que volver a entrenar y medir (<code class="mono">python herramientas/entrenar_modelos.py</code>).</li>
+      <li><strong>Aprende lo que le muestres.</strong> Al principio el simulador nunca tenía clientes que compraran dos veces en una hora, y la red aprendió que eso era fraude: marcaba el 19 % de las compras normales de la demo. Se corrigió agregando esos casos legítimos. Lo mismo pasó en la exposición con el autoencoder (2 de 60 hasta limpiar los datos).</li>
+      <li><strong>Falsas alarmas.</strong> No bloquea: marca la operación para revisión humana. El autoencoder tiene más falsas alarmas (por ejemplo, con pedidos grandes legítimos); el clasificador muy pocas.</li>
+      <li><strong>Clientes nuevos.</strong> El clasificador sí los evalúa con lo que aprendió de todos, pero con menos certeza que a un cliente con historial (ver la tabla por segmento).</li>
+      <li><strong>Montos de otros negocios.</strong> Si el generador del profesor manda montos que no son de una cafetería, todo le parecerá raro. Para eso está el modo "solo observar" en Antifraude → Reglas.</li>
       <li><strong>Los hábitos cambian.</strong> Si un cliente cambia de horario o de método, al principio se verá raro. Hay que reentrenar periódicamente.</li>
       <li><strong>Complementa, no reemplaza.</strong> Las reglas siguen bloqueando ráfagas y firmas falsas; la IA agrega lo que no se puede escribir como regla.</li>
     </ul>
@@ -208,5 +335,6 @@
   <script type="module" src="static/js/comun.js"></script>
   <script type="module" src="static/js/carrito.js"></script>
   <script type="module" src="static/js/ia.js"></script>
+<script type="module" src="static/js/ia_modelos.js"></script>
 </body>
 </html>

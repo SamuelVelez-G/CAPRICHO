@@ -28,13 +28,16 @@ sys.path.insert(0, str(RAIZ))
 
 from capricho import create_app  # noqa: E402
 from capricho.registro import logger  # noqa: E402
-from capricho.servicios import anomalias, detector, domicilios, estadisticas  # noqa: E402
+from capricho.servicios import anomalias, benchmark, detector, domicilios, estadisticas  # noqa: E402
 
 DESTINO = RAIZ / "docs"
-CONSERVAR = {"capturas"}            # carpetas de docs/ que no se borran al exportar
+CONSERVAR = {"capturas", "INFORME_ALGORITMOS.md"}      # lo de docs/ que no se borra al exportar
 PAGINAS = {"/": "index.html", "/laboratorio": "laboratorio.html", "/ia": "ia.html", "/dashboard": "dashboard.html",
            "/operacion": "operacion.html", "/pagar": "pagar.html", "/ingresar": "ingresar.html",
-           "/registro": "registro.html", "/mis-pedidos": "index.html"}
+           "/registro": "registro.html", "/mis-pedidos": "index.html", "/panel": "panel.html",
+           "/en-vivo": "en-vivo.html", "/transferir": "transferir.html", "/gestion": "gestion.html",
+           "/calidad": "calidad.html", "/integridad": "integridad.html", "/algoritmos": "algoritmos.html",
+           "/estadistica": "estadistica.html"}
 MAX_PAGINAS_TRANSACCIONES = 8
 
 AVISO = """<div class="aviso-estatico" role="note"><div class="contenedor">
@@ -107,6 +110,7 @@ def main():
     temporal = Path(tempfile.mkdtemp(prefix="capricho_demo_"))
     logger.setLevel(logging.ERROR)
     app = create_app({"BASE_DATOS": str(temporal / "demo.db"), "CARPETA_LOGS": str(temporal / "logs"),
+                      "CARPETA_COMPROBANTES": str(temporal / "comprobantes"),
                       "TESTING": True, "LIMITE_PETICIONES_POR_SEGUNDO": 100000})
     app.extensions["capricho"].limitador_ip.maximo = 100000
     cliente = app.test_client()
@@ -123,7 +127,8 @@ def main():
                                                       "password": app.config["ADMIN_PASSWORD"]},
                              headers={"X-CSRF-Token": csrf})
     assert respuesta.status_code == 200, respuesta.get_json()
-    for ruta in ("/", "/laboratorio", "/ia", "/dashboard", "/operacion", "/pagar"):
+    for ruta in ("/", "/laboratorio", "/ia", "/dashboard", "/operacion", "/pagar", "/panel", "/en-vivo", "/transferir",
+                 "/gestion", "/calidad", "/integridad", "/algoritmos", "/estadistica"):
         exportar.pagina(ruta)
 
     # Consultas sueltas.
@@ -155,6 +160,25 @@ def main():
     # Detalle de cada anomalía (línea de tiempo y ventana deslizante).
     from capricho.db import conectar
     conexion = conectar(app.config["BASE_DATOS"])
+
+    # Entrega final: panel, calidad, integridad, algoritmos, estadística, gestión y en vivo.
+    print("Midiendo el benchmark completo para la demo (unos 30 s)...")
+    benchmark.guardar(conexion, benchmark.correr(conexion, "COMPLETO"))
+    for url in ("/api/ventas?dias=30", "/api/alertas?limite=8", "/api/calidad/auditoria", "/api/integridad",
+                "/api/benchmark", "/api/estadistica/empleados", "/api/categorias?todas=1", "/api/categorias",
+                "/api/vivo/feed?desde=0", "/api/vivo/sugerencias"):
+        exportar.json(url)
+    for usuario in exportar.json("/api/estadistica/usuarios?q=")["usuarios"]:
+        exportar.json(f"/api/estadistica/usuarios/{usuario['id']}")
+    for pagina in range(1, 6):
+        for factura in exportar.json(f"/api/facturas?pagina={pagina}&estado=&canal=&q=")["facturas"]:
+            exportar.json(f"/api/facturas/{factura['id']}")
+    for pagina in range(1, 4):
+        exportar.json(f"/api/caja/pedidos?pagina={pagina}&canal=&estado=")
+    for pagina in range(1, 3):
+        exportar.json(f"/api/usuarios?pagina={pagina}&rol=&q=")
+    for (producto_id,) in conexion.execute("SELECT id FROM productos"):
+        exportar.json(f"/api/productos/{producto_id}/movimientos")
     for (anomalia_id,) in conexion.execute("SELECT id FROM anomalias"):
         exportar.json(f"/api/anomalias/{anomalia_id}")
 

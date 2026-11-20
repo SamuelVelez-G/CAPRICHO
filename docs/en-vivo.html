@@ -1,0 +1,199 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="ZnY_4WTe8fu72-hf6wfBQB1w9DkcWMXIfJZGbyeaQHI">
+  <meta name="description" content="Capricho, granizado de café artesanal en Aranjuez, Medellín. Pide a domicilio o recoge en tienda.">
+  <meta name="theme-color" content="#75383f">
+  <title>En vivo · Capricho</title>
+  <link rel="icon" type="image/png" href="static/img/favicon.png">
+  <link rel="apple-touch-icon" href="static/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Fraunces:opsz,wght,SOFT@9..144,600..900,0..100&display=swap">
+  <link rel="stylesheet" href="static/css/capricho.css">
+</head>
+<body data-estatico="1" data-rol="ADMIN" data-iconos="static/img/iconos.svg">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="barra">
+    <div class="contenedor barra__fila">
+      <a class="marca" href="index.html" aria-label="Capricho, ir al inicio">
+        <img src="static/img/logo-circulo.png" alt="" width="50" height="50">
+        <span class="marca__texto">Granizado de café artesanal</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Principal">
+        <a href="index.html#menu">Menú</a>
+        <a href="index.html#arma">Arma el tuyo</a>
+        <a href="index.html#domicilios">Domicilios</a>
+        <a href="laboratorio.html" >Laboratorio</a>
+        <a href="ia.html" >IA</a>
+        <a href="transferir.html" >Transferir</a>
+      </nav>
+      <div class="barra__acciones">
+        
+          <span class="saludo">Hola, Administrador</span>
+          
+          <button class="boton boton--crema boton--sm" id="boton-salir" type="button"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#salir"></use></svg><span>Salir</span></button>
+        
+        <button class="carrito-boton" id="abrir-carrito" type="button" aria-label="Abrir carrito" aria-controls="carrito">
+          <svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#carrito"></use></svg><span class="carrito-boton__cuenta" id="cuenta-carrito" data-cero></span>
+        </button>
+      </div>
+      <button class="menu-movil" id="menu-movil" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menú"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#menu"></use></svg></button>
+    </div>
+  </header>
+<div class="aviso-estatico" role="note"><div class="contenedor">
+  <svg class="icono" aria-hidden="true"><use href="static/img/iconos.svg#info"></use></svg>
+  <span>Demo estática en GitHub Pages con datos de demostración: se puede recorrer todo, pero no enviar
+  transacciones ni pagar. Para probar el detector en vivo ejecuta el proyecto con <code>python run.py</code>.</span>
+</div></div>
+
+  
+  
+  <nav class="subnav" aria-label="Módulos del personal">
+    <div class="contenedor subnav__fila">
+      <span class="subnav__rol">Administración</span>
+      
+        <a href="panel.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#grafico"></use></svg>Panel</a>
+      
+        <a href="en-vivo.html" aria-current="page"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#rayo"></use></svg>En vivo</a>
+      
+        <a href="gestion.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tienda"></use></svg>Gestión</a>
+      
+        <a href="dashboard.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#escudo"></use></svg>Antifraude</a>
+      
+        <a href="calidad.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#matraz"></use></svg>Calidad</a>
+      
+        <a href="integridad.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#candado"></use></svg>Integridad</a>
+      
+        <a href="estadistica.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#tabla"></use></svg>Estadística</a>
+      
+        <a href="algoritmos.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#reloj"></use></svg>Algoritmos</a>
+      
+        <a href="operacion.html" ><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#cola"></use></svg>Operación</a>
+      
+    </div>
+  </nav>
+  
+
+  <main id="contenido">
+    
+<section class="panel-cabeza">
+  <div class="contenedor">
+    <p class="eyebrow">Transferencia en este momento</p>
+    <h1>Así decide el sistema, en vivo</h1>
+    <p>Haz una transferencia aquí, desde la página <strong>Transferir</strong> en un celular, o con el generador del profesor. Cada operación que llega aparece abajo con el análisis de cada parte del sistema: las reglas, la estadística del cliente y las redes neuronales con lo que aprendieron.</p>
+  </div>
+</section>
+
+<div class="contenedor dash">
+  <div class="aviso aviso--alerta" id="aviso-modo" hidden><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#info"></use></svg><p></p></div>
+  <div class="kpis kpis--5" id="vivo-kpis"></div>
+
+  <div class="vivo">
+    <aside class="vivo__lado">
+      <section class="tarjeta">
+        <h2 class="tarjeta__titulo">Hacer una transferencia</h2>
+        <p class="tarjeta__sub">El servidor la firma como lo haría la pasarela de pagos y la manda al mismo detector del endpoint.</p>
+        
+<div class="escenarios-vivo" id="escenarios" aria-label="Casos rápidos"></div>
+<form class="formulario form-vivo" id="form-transferencia" novalidate>
+  <div class="campo" data-campo="email">
+    <label for="t-email">Correo del cliente</label>
+    <input id="t-email" name="email" type="email" autocomplete="off" required placeholder="nombre@correo.com">
+    <span class="ayuda">Un correo que nunca haya comprado es un cliente nuevo.</span>
+    <span class="campo__error" role="alert"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span>
+  </div>
+  <div class="fila-campos">
+    <div class="campo" data-campo="valor">
+      <label for="t-valor">Monto ($)</label>
+      <input id="t-valor" name="valor" type="number" min="100" step="100" required value="12000">
+      <span class="campo__error" role="alert"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span>
+    </div>
+    <div class="campo" data-campo="metodo">
+      <label for="t-metodo">Método</label>
+      <select id="t-metodo" name="metodo">
+        <option>Nequi</option><option>Tarjeta</option><option>Daviplata</option><option>PSE</option>
+        <option>Efectivo</option><option>Transferencia</option>
+      </select>
+      <span class="campo__error" role="alert"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#alerta"></use></svg><span></span></span>
+    </div>
+  </div>
+  <div class="fila-campos">
+    <label class="casilla"><input type="checkbox" name="alterar_firma"> Alterar el monto en el camino (firma inválida)</label>
+    <label class="casilla"><input type="checkbox" name="rafaga"> Enviar 6 en el mismo segundo (bot)</label>
+  </div>
+  <button class="boton boton--bloque" type="submit"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#enviar"></use></svg> Transferir ahora</button>
+</form>
+<div class="resultado-vivo" id="resultado-transferencia" hidden></div>
+      </section>
+      <section class="tarjeta">
+        <h2 class="tarjeta__titulo">Desde un celular</h2>
+        <p class="tarjeta__sub">Abre esta dirección en el celular (con ngrok, la dirección pública) y haz la transferencia desde ahí:</p>
+        <p class="enlace-grande" id="enlace-celular">/transferir</p>
+      </section>
+      <section class="tarjeta">
+        <div class="tarjeta__cabeza">
+          <h2 class="tarjeta__titulo">Llegando</h2>
+          <span class="en-vivo"><span class="punto-vivo"></span>Escuchando</span>
+        </div>
+        <ol class="feed-vivo" id="feed"></ol>
+      </section>
+    </aside>
+
+    <section class="tarjeta vivo__analisis" aria-live="polite">
+      <div class="tarjeta__cabeza">
+        <div><h2 class="tarjeta__titulo">Análisis paso a paso</h2>
+          <p class="tarjeta__sub" id="analisis-sub">Esperando una transferencia…</p></div>
+        <label class="casilla"><input type="checkbox" id="seguir" checked> Mostrar la última que llegue</label>
+      </div>
+      <ol class="pasos-vivo" id="pasos"></ol>
+    </section>
+  </div>
+</div>
+
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor">
+      <div class="pie__rejilla">
+        <div class="pie__marca">
+          <img src="static/img/logo-circulo.png" alt="Capricho" width="64" height="64">
+          <div>
+            <strong>Granizado de café artesanal</strong><br>
+            Aranjuez · Cra. 50c # 92-84 · Medellín
+          </div>
+        </div>
+        <div>
+          <a href="index.html#arma">Pedir ahora</a> ·
+          <a href="laboratorio.html">Laboratorio antifraude</a>
+        </div>
+      </div>
+      <small>Proyecto académico de Programación Avanzada · Institución Universitaria Pascual Bravo · Pagos simulados, no se cobra dinero real.</small>
+    </div>
+  </footer>
+
+  <div class="velo" id="velo-carrito" hidden></div>
+  <aside class="carrito" id="carrito" aria-label="Carrito de compras" hidden>
+    <div class="carrito__cabeza">
+      <h2>Tu pedido</h2>
+      <button class="boton-icono" id="cerrar-carrito" type="button" aria-label="Cerrar carrito"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#cerrar"></use></svg></button>
+    </div>
+    <div class="carrito__lineas" id="carrito-lineas"></div>
+    <div class="carrito__pie">
+      <div class="total-grande"><span>Subtotal</span><strong id="carrito-total">$0</strong></div>
+      <a class="boton boton--bloque" href="pagar.html" id="ir-a-pagar">Ir a pagar <svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#flecha"></use></svg></a>
+      <p class="nota-seguridad"><svg class="icono " aria-hidden="true" focusable="false"><use href="static/img/iconos.svg#escudo"></use></svg><span>El precio final lo calcula el servidor. Cambiarlo en el navegador no cambia lo que pagas: la compra se rechaza.</span></p>
+    </div>
+  </aside>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="static/js/comun.js"></script>
+  <script type="module" src="static/js/carrito.js"></script>
+  <script type="module" src="static/js/en_vivo.js"></script>
+</body>
+</html>

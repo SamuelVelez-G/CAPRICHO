@@ -12,8 +12,8 @@ async function iniciar() {
     toast("No se pudo cargar el menú. Recarga la página.", "error");
     return;
   }
-  estado.granizados = datos.productos.filter((p) => p.categoria === "GRANIZADO").sort((a, b) => a.onzas - b.onzas);
-  estado.adiciones = datos.productos.filter((p) => p.categoria === "ADICION");
+  estado.granizados = datos.productos.filter((p) => p.tipo === "GRANIZADO").sort((a, b) => a.onzas - b.onzas);
+  estado.adiciones = datos.productos.filter((p) => p.tipo === "ADICION");
   estado.sabores = datos.sabores;
   estado.maxAdiciones = datos.max_adiciones;
 

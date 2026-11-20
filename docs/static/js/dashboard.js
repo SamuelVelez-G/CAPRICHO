@@ -16,7 +16,8 @@ const SERIES_ESTADO = [
 const COLOR_NIVEL = { BAJO: css("--nivel-bajo"), MEDIO: css("--nivel-medio"), ALTO: css("--nivel-alto"), CRITICO: css("--nivel-critico") };
 const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
 const TIPO_CORTO = { POSIBLE_FRAUDE: "Posible fraude", RAFAGA: "Ráfaga", HASH_INVALIDO: "Hash inválido",
-  MONTO_ATIPICO: "Monto atípico", PRECIO_MANIPULADO: "Precio alterado", COMPORTAMIENTO_INUSUAL: "IA: inusual" };
+  MONTO_ATIPICO: "Monto atípico", PRECIO_MANIPULADO: "Precio alterado", COMPORTAMIENTO_INUSUAL: "IA: inusual",
+  FRAUDE_CLASIFICADOR: "IA: fraude", MONTO_FUERA_DE_CUARTILES: "Fuera de cuartiles" };
 
 const estado = { fuente: "vivo", rango: "30d", por: "txn", casoVentana: null, casosVistos: "", datos: null, tipos: {}, paginaAnomalias: 1, paginaTxn: 1, vistas: {}, reglas: null, temporizador: null };
 const dash = document.getElementById("dash");
@@ -29,7 +30,7 @@ function parametrosFiltro(extra = {}) {
   return new URLSearchParams({ fuente: estado.fuente, rango: estado.rango, por: estado.por, ...extra }).toString();
 }
 
-const ORIGEN = { API: "API", LOTE: "Lote", TIENDA: "Tienda", DEMO: "Demo" };
+const ORIGEN = { API: "API", LOTE: "Lote", TIENDA: "Tienda", CAJA: "Caja", VIVO: "En vivo", DEMO: "Demo" };
 
 async function cargar({ silencioso = false } = {}) {
   if (!silencioso) dash.classList.add("cargando");

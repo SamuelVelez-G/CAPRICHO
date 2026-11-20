@@ -1,7 +1,11 @@
 # Capricho — Granizado de café artesanal
 
-Tienda en línea de **Capricho** (Aranjuez, Cra. 50c # 92-84, Medellín) con un
-**sistema de detección de fraude** basado en *ventana deslizante*.
+Plataforma de **Capricho** (Aranjuez, Cra. 50c # 92-84, Medellín) que opera el
+negocio (usuarios, categorías, ítems con inventario, pedidos de todos los
+canales, facturas y pagos) y además **valida, protege y analiza** cada
+operación: limpieza de datos, hash encadenado, algoritmos medidos
+experimentalmente, estadística por usuario e **inteligencia artificial sin LLM**
+(Keras y TensorFlow) que clasifica cada operación como normal o fraudulenta.
 
 Proyecto de Programación Avanzada · Institución Universitaria Pascual Bravo.
 Resuelve lo que pide *Técnicas de resolución de problemas* (caso Appresso) y
@@ -12,7 +16,36 @@ reúne lo mejor de los dos trabajos anteriores:
 | Trabajo 1 (complejidad) | **Búsqueda por índice hash O(1)**: usuarios por correo y transacciones por `idTxn` |
 | Trabajo 2 (estructuras) | **Cola FIFO** para los pedidos, **Pila LIFO** para los errores y **grafo + Dijkstra** para los domicilios |
 | Técnicas de resolución | Métodos HTTP, hash HMAC-SHA256, validación, divide y vencerás, búsqueda eficiente, logs y **ventana deslizante** |
-| Keras (redes neuronales) | **Autoencoder** que aprende los hábitos de compra y detecta fraudes que ninguna regla ve |
+| Keras (exposición) | **Autoencoder** que aprende los hábitos de compra y detecta fraudes que ninguna regla ve |
+| **Entrega final** | Módulos operativos, limpieza y calidad, integridad, algoritmos O(n)/O(n²)/O(n log n), estadística simple y cuatro modelos de IA |
+
+---
+
+## Entrega final
+
+Cómo se cubre cada criterio de evaluación (el detalle, con cifras, está en
+**[INFORME_FINAL.md](INFORME_FINAL.md)** y la guía para presentarlo en
+**[EXPOSICION_FINAL.md](EXPOSICION_FINAL.md)**):
+
+| Criterio | Peso | Dónde se ve | Qué hay |
+|---|---|---|---|
+| Base de datos | 5 % | `capricho/esquema.sql` | 16 tablas con llaves foráneas, CHECK, índices y versión de esquema |
+| Módulos operativos | 15 % | `/gestion` | CRUD de usuarios con roles, categorías e ítems; pedidos de varios ítems por canal que descuentan inventario; facturas con consecutivo, impuesto al consumo y descuentos; pagos con comprobante |
+| Algoritmos y análisis experimental | 30 % | `/algoritmos` | 8 problemas en O(1), O(log n), O(n), O(n log n) y O(n²), medidos hasta 50.000 datos del sistema, con la complejidad estimada por regresión |
+| Limpieza y calidad de datos | 10 % | `/calidad` | Auditoría con puntaje (completitud, validez, unicidad, consistencia), corrección automática e importación de CSV/JSON sucios |
+| Integridad | 10 % | `/integridad` | Hash encadenado HMAC-SHA256 de facturas y pagos; comprobantes firmados (falsos, reutilizados o que no coinciden) |
+| Modelos de IA | 30 % | `/ia`, `/en-vivo`, `/estadistica` | Clasificador (Keras + TensorFlow), regresión del monto esperado, predicción de demanda, autoencoder y anomalías por usuario con Simple Statistics |
+
+Las dos observaciones del profesor después de la exposición:
+
+1. **Aprender de todos y no solo del historial de cada cliente.** El
+   clasificador se entrena con toda la población y sus variables generales
+   sirven aunque el cliente sea nuevo: con clientes nuevos detecta el 85 % de
+   los fraudes con 100 % de precisión (las reglas, 56 %). Cada decisión dice
+   cuánto conocimiento general y cuánto personal usó.
+2. **Una transferencia en vivo.** En `/transferir` (también desde un celular
+   con ngrok) se hace una transferencia y `/en-vivo` muestra en ese momento cómo
+   la analizó cada parte del sistema con lo que aprendió.
 
 ---
 
@@ -20,9 +53,9 @@ reúne lo mejor de los dos trabajos anteriores:
 
 **[samuelvelez-g.github.io/CAPRICHO](https://samuelvelez-g.github.io/CAPRICHO/)**
 
-Versión estática publicada con GitHub Pages: la tienda, el dashboard, el
-laboratorio y la operación con los mismos estilos, recorribles con datos de
-demostración. Como GitHub Pages no ejecuta Python, ahí no se pueden enviar
+Versión estática publicada con GitHub Pages: la tienda, el panel, el
+dashboard, los algoritmos, la calidad, la integridad, la estadística y los
+modelos de IA con los mismos estilos, recorribles con datos de demostración. Como GitHub Pages no ejecuta Python, ahí no se pueden enviar
 transacciones ni pagar; para el sistema completo (endpoint, detector en vivo,
 base de datos) hay que ejecutar el proyecto como se explica abajo.
 
@@ -38,10 +71,11 @@ base de datos) hay que ejecutar el proyecto como se explica abajo.
 
 ## Cómo ejecutarlo
 
-Necesita **Python 3.10 o superior**.
+Necesita **Python 3.12** (TensorFlow 2.21 funciona con Python 3.10 a 3.13).
+En Windows se instala con `pymanager install 3.12`.
 
 ```bash
-python -m venv .venv
+py -3.12 -m venv .venv
 ```
 
 En Windows:
@@ -67,11 +101,15 @@ python run.py
 ```
 
 Abre **http://127.0.0.1:5000**. La primera vez se crea la base de datos
-(`instancia/capricho.db`) con 9 semanas de datos de demostración.
+(`instancia/capricho.db`) con 9 semanas de operación de demostración. Al
+arrancar debe decir `IA (Keras): clasificador, autoencoder, monto esperado,
+demanda sobre tensorflow`; si dice `DESACTIVADA`, el entorno `.venv` no está
+activado. Una base de una versión anterior se guarda sola como respaldo.
 
 | Rol | Correo | Contraseña |
 |---|---|---|
-| Administrador (dashboard y operación) | `admin@capricho.co` | `Capricho2026*` |
+| Administrador (todo) | `admin@capricho.co` | `Capricho2026*` |
+| Empleada de caja (gestión) | `caja@capricho.co` | `Caja2026*` |
 | Cliente de prueba | `cliente@capricho.co` | `Cliente2026*` |
 
 Para empezar de cero con 9 semanas de datos de demostración nuevos:
@@ -87,10 +125,23 @@ y cuentas), así el dashboard muestra únicamente lo que él envíe:
 python run.py --reiniciar --limpio
 ```
 
-Pruebas automáticas (64 pruebas: casos de uso, franjas, formatos del generador, separación de datos en vivo y demo, IA, seguridad, formularios y métodos HTTP):
+Pruebas automáticas (86 pruebas: casos de uso, franjas, formatos del generador, datos en vivo y demo, IA, caja,
+facturas, comprobantes, hash encadenado, roles, calidad, algoritmos, estadística, transferencia en vivo y seguridad):
 
 ```bash
 python -m unittest discover -s tests -t .
+```
+
+Volver a entrenar los modelos (unos 2 minutos; ya vienen entrenados en `capricho/ia/artefactos/`):
+
+```bash
+python herramientas/entrenar_modelos.py --todo
+```
+
+Benchmark completo de los algoritmos (unos 30 s; escribe `docs/INFORME_ALGORITMOS.md`):
+
+```bash
+python herramientas/benchmark.py
 ```
 
 ---
@@ -117,55 +168,51 @@ Alternativa sin cuenta: `cloudflared tunnel --url http://localhost:5000`.
 
 ---
 
-## Detector de fraude con IA (Keras)
+## Inteligencia artificial (Keras + TensorFlow)
 
-**El problema.** Las reglas solo detectan lo que alguien programó: 3 compras en
-la ventana, 5 en un segundo, montos de $300.000 o más. Un fraude que no encaje
-en ninguna pasa como normal, por ejemplo $250.000 a las 3 a. m. con un método
-que el cliente nunca usa.
+Cuatro redes neuronales, sin LLM. Todas se entrenan con
+`herramientas/entrenar_modelos.py`, se guardan en formato `.keras` y la
+aplicación las carga al arrancar. En vivo se ejecutan con NumPy (los mismos
+pesos, 160 veces más rápido que llamar a Keras para una sola operación).
 
-**La solución.** Un *autoencoder* de Keras aprende cómo compran normalmente los
-clientes de Capricho y marca lo que no se parece, sin necesidad de ejemplos de
-fraude etiquetados.
+| Modelo | Pregunta | Tipo | Resultado en datos que no vio |
+|---|---|---|---|
+| **Clasificador** (`ia/clasificador.py`) | ¿Esta operación es normal o fraudulenta? | Supervisado, 23 variables → 64 → 32 → 1 | Detecta 90,5 % de los fraudes con 100 % de precisión; con clientes nuevos 85,2 % |
+| **Monto esperado** (`ia/monto.py`) | ¿Cuánto debería pagar este cliente? | Regresión | Error típico 45,9 % contra 48,7 % de la mediana del cliente |
+| **Autoencoder** (`ia/modelo.py`) | ¿Se parece a los hábitos de ESTE cliente? | Sin etiquetas | El de la exposición |
+| **Demanda** (`ia/demanda.py`) | ¿Cuánto se va a vender? | Series de tiempo | Error diario $87.261 contra $103.512 de la regresión lineal |
 
-```
-compra -> 9 variables de comportamiento -> 9 -> 24 -> 12 -> [4] -> 12 -> 24 -> 9 -> error de reconstrucción -> riesgo 0-100
-```
+**Clasificador.** Se entrena con 90 días de una población simulada de 800
+clientes con los hábitos de Capricho y 7 tipos de fraude etiquetados
+(`ia/simulador.py`), con división temporal (los últimos 14 días solo para
+probar). TensorFlow prepara los datos: `keras.layers.Normalization`, y
+`tf.data` mezcla y aumenta los fraudes con ruido gaussiano (el aumento sube el
+F1 de 0,929 a 0,950). Comparación en prueba:
 
-| Paso | Dónde |
-|---|---|
-| Variables: hora (seno y coseno), monto, monto vs. su habitual, método vs. el habitual, hora vs. su horario, compras en la última hora, tiempo desde la anterior, historial | `capricho/ia/caracteristicas.py` |
-| Modelo: capas `Dense`, pérdida MSE, optimizador Adam, parada temprana | `capricho/ia/modelo.py` |
-| Entrenamiento, umbral (percentil 99) y evaluación contra las reglas | `herramientas/entrenar_ia.py` |
-| Uso en vivo: cada transacción del endpoint recibe `riesgo_ia` y, si supera el umbral, la anomalía `COMPORTAMIENTO_INUSUAL` | `capricho/servicios/detector.py` |
-| Página con el entrenamiento, la evaluación y un probador | `/ia` |
+| Detector | Todos | Clientes nuevos | Precisión | Falsas alarmas |
+|---|---|---|---|---|
+| Reglas de la primera entrega | 52,7 % | 55,6 % | 100 % | 0 % |
+| Autoencoder de la exposición | 71,6 % | 81,5 % | 15,2 % | 3,86 % |
+| **Clasificador** | **90,5 %** | **85,2 %** | **100 %** | **0 %** |
 
-Resultados con compras y ataques que el modelo no vio al entrenar:
+Cada decisión trae su explicación: qué variables empujaron hacia fraude o hacia
+normal y cuánto conocimiento general (de todos los clientes) y personal (del
+historial de ese cliente) usó. Con un cliente nuevo es 100 % general.
 
-| Ataque | IA | Reglas |
-|---|---|---|
-| Fraude silencioso de madrugada | 100 % | 0 % |
-| Cuenta tomada | 97 % | 0 % |
-| Prueba de tarjeta | 100 % | 0 % |
-| Cliente nuevo con monto alto | 100 % | 0 % |
-| Monto atípico (sí lo ve la regla) | 100 % | 100 % |
-| **Falsas alarmas en compras normales** | **2,0 %** | — |
-
-Para volver a entrenar (unos 2 minutos; el modelo entrenado ya viene en `capricho/ia/artefactos/`):
-
-```bash
-python herramientas/entrenar_ia.py
-```
+**Anomalías por usuario con estadística simple** (`servicios/estadistica.py`):
+cuartiles, cercas de Tukey y puntaje z del monto de cada cliente (o de la
+población si es nuevo), y tasas diarias de descuentos y anulaciones por
+empleado. El panel `/estadistica` lo recalcula en el navegador con la librería
+**Simple Statistics** 7.8.8 (`static/js/vendor/`) y muestra que los dos
+cálculos coinciden.
 
 En el dashboard, "Reglas de detección", se elige qué hace la IA: **marcar** la
-compra como sospechosa, **solo observar** (guarda el riesgo sin cambiar el
-resultado de las reglas, útil si el generador del profesor manda datos que no
-son de una cafetería) o **apagada**. Limitaciones: datos de demostración, falsas
-alarmas cercanas al 2 %, clientes sin historial y hábitos que cambian; el
-detalle está en la página `/ia`.
+operación como sospechosa, **solo observar** (útil si el generador del
+profesor manda montos que no son de una cafetería) o **apagada**.
 
-> Keras 3 funciona sobre varios motores. TensorFlow todavía no tiene versión
-> para Python 3.14, así que usamos **PyTorch** (`KERAS_BACKEND=torch`).
+> Keras 3 corre sobre TensorFlow, JAX o PyTorch con el mismo código. El proyecto
+> usa TensorFlow 2.21 (Python 3.12). Si alguien solo tiene Python 3.14, la
+> aplicación funciona igual sobre PyTorch; solo el reentrenamiento exige TensorFlow.
 
 ---
 
@@ -211,10 +258,18 @@ guarda cada página como HTML y cada consulta GET como JSON. En GitHub:
 |---|---|
 | `/` | Tienda: menú, arma tu granizado, mapa de domicilios |
 | `/pagar` | Pago del carrito (necesita sesión) |
+| `/transferir` | **Transferencia en vivo** desde cualquier dispositivo (también el celular del profesor por ngrok) |
+| `/en-vivo` | **Monitor**: cada transferencia que llega y cómo la analizó cada parte del sistema (administrador) |
+| `/panel` | Ventas, predicción de demanda, alertas, calidad, modelos y benchmark (administrador) |
+| `/gestion` | Caja, facturas, pedidos, ítems con inventario, categorías y usuarios con roles (administrador y empleados) |
+| `/calidad` | Auditoría de calidad, corrección automática e importación de archivos sucios (administrador) |
+| `/integridad` | Cadena de hashes de facturas y pagos, con laboratorio de alteración (administrador) |
+| `/algoritmos` | Benchmark de los algoritmos con gráficas log-log |
+| `/estadistica` | Perfil estadístico por usuario y por empleado con Simple Statistics (administrador) |
+| `/ia` | Los cuatro modelos: cómo se entrenaron, qué tan bien funcionan y probadores |
 | `/laboratorio` | **Para el profesor**: formulario y escenarios para mandar pagos buenos y fraudulentos |
-| `/ia` | Detector con IA: cómo se entrenó, qué tan bien detecta y probador en vivo |
 | `/dashboard` | Monitoreo antifraude (administrador) |
-| `/operacion` | Cola de pedidos, pila de errores, grafo, búsqueda por índice y CRUD de productos (administrador) |
+| `/operacion` | Cola de pedidos, pila de errores, grafo, búsqueda por índice y CRUD de ítems con los cinco métodos HTTP |
 
 ---
 
@@ -359,18 +414,21 @@ pinta con `textContent` (sin `innerHTML`), lo que evita XSS.
 
 ```
 capricho/
-  config.py            configuración (llaves, límites, cuentas de demo)
-  esquema.sql          tablas: usuarios, transacciones, anomalias (diapositiva 45) y las de la tienda
+  config.py            configuración (llaves, impuesto, límites, cuentas de demo)
+  esquema.sql          16 tablas: operación, antifraude (diapositiva 45), alertas, calidad y benchmark
   estructuras.py       Cola, Pila, IndiceHash, Grafo+Dijkstra, merge sort, ventana deslizante
+  algoritmos.py        los 8 problemas del análisis experimental en varias complejidades
   seguridad.py         scrypt, HMAC, inyección SQL, CSRF, cabeceras
   validaciones.py      reglas de todos los formularios y del JSON de transacciones
   registro.py          logs (qué, cuándo, dónde) y pila de errores
   semilla.py           datos de demostración que pasan por el detector real
-  servicios/           detector, pedidos, catálogo, domicilios, estadísticas, anomalías
-  ia/                  autoencoder de Keras: variables, modelo y modelo entrenado (artefactos/)
+  servicios/           detector, pedidos, catálogo, categorías, facturación, pagos, comprobantes,
+                       integridad, calidad, normalización, estadística, ventas, benchmark, alertas
+  ia/                  clasificador, monto esperado, autoencoder, demanda, simulador e inferencia en NumPy
   rutas/               endpoints de la API y páginas
-  templates/ static/   interfaz (HTML, CSS y JavaScript sin librerías externas)
-herramientas/          enviar transacciones, entrenar la IA y exportar la demo estática
+  templates/ static/   interfaz (HTML, CSS y JavaScript; Simple Statistics en static/js/vendor/)
+herramientas/          entrenar los modelos, benchmark, enviar transacciones y exportar la demo estática
+datos/                 archivos sucios de ejemplo para la limpieza de datos
 docs/                  demo estática para GitHub Pages (generada) y capturas
 tests/                 pruebas automáticas
 run.py                 arranque

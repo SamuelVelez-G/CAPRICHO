@@ -49,7 +49,9 @@ async function apiEstatica(metodo, url) {
 
 const PAGINAS_ESTATICAS = { "/": "index.html", "/laboratorio": "laboratorio.html", "/ia": "ia.html", "/dashboard": "dashboard.html",
   "/operacion": "operacion.html", "/pagar": "pagar.html", "/ingresar": "ingresar.html", "/registro": "registro.html",
-  "/mis-pedidos": "index.html" };
+  "/mis-pedidos": "index.html", "/panel": "panel.html", "/en-vivo": "en-vivo.html", "/transferir": "transferir.html",
+  "/gestion": "gestion.html", "/calidad": "calidad.html", "/integridad": "integridad.html", "/algoritmos": "algoritmos.html",
+  "/estadistica": "estadistica.html" };
 
 if (ESTATICO) {
   // Los enlaces que el JavaScript arma con rutas del servidor ("/#arma",
@@ -172,9 +174,15 @@ const ICONO_ESTADO = {
   SOSPECHOSA: "alerta", ABIERTA: "alerta", EN_PROCESO: "reloj",
   RECHAZADA: "bloqueo", RECHAZADO: "bloqueo", NUEVA: "alerta", INVALIDA: "bloqueo",
   DESCARTADA: "cerrar", SOLICITADO: "cola", DUPLICADA: "bloqueo",
-  EN_OBSERVACION: "alerta", ACTIVO: "ok", INACTIVO: "cerrar",
+  EN_OBSERVACION: "alerta", ACTIVO: "ok", INACTIVO: "cerrar", BLOQUEADO: "bloqueo",
+  PAGADA: "ok", EMITIDA: "reloj", ANULADA: "cerrar", ANULADO: "cerrar", PENDIENTE_PAGO: "reloj",
+  APROBADO: "ok", PENDIENTE: "reloj", VERIFICADO: "ok", SIN_VERIFICAR: "alerta", NO_REQUIERE: "info",
+  FALSO: "bloqueo", REUTILIZADO: "bloqueo", NO_COINCIDE: "bloqueo", SIN_COMPROBANTE: "alerta",
+  NORMAL: "ok", FRAUDULENTA: "bloqueo",
 };
-const TEXTO_ESTADO = { EN_PROCESO: "En proceso", SOLICITADO: "En cola", EN_OBSERVACION: "En observación" };
+const TEXTO_ESTADO = { EN_PROCESO: "En proceso", SOLICITADO: "En cola", EN_OBSERVACION: "En observación",
+  PENDIENTE_PAGO: "Pendiente de pago", SIN_VERIFICAR: "Sin verificar", NO_REQUIERE: "No requiere",
+  NO_COINCIDE: "No coincide", SIN_COMPROBANTE: "Sin comprobante" };
 export function insignia(estado) {
   const texto = TEXTO_ESTADO[estado] || estado.charAt(0) + estado.slice(1).toLowerCase();
   return el("span", { class: `insignia insignia--${estado}` }, icono(ICONO_ESTADO[estado] || "info"), texto);

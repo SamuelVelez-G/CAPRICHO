@@ -751,7 +751,7 @@ fieldset.paso > legend { padding: 0; }
 /* ==========================================================================
    Entrega final: navegación del personal, en vivo, gestión, análisis
    ========================================================================== */
-.subnav { background: var(--vino-profundo); color: var(--crema); position: sticky; top: 0; z-index: 30; }
+.subnav { background: var(--vino-profundo); color: var(--crema); position: relative; z-index: 5; }
 .subnav__fila { display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: thin; padding: 6px 16px; }
 .subnav__rol { font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; opacity: .75; margin-right: 8px; white-space: nowrap; }
 .subnav a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; color: var(--crema);
