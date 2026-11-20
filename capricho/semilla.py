@@ -1,28 +1,45 @@
 """
 Datos de demostración.
 
-Genera 9 semanas de historia para que el dashboard tenga qué mostrar. Nada se
-inserta "a mano" como anomalía: cada transacción pasa por el mismo detector
-que usa la API, en orden cronológico, así que las anomalías que aparecen son
-las que el algoritmo realmente encontró.
+Genera 9 semanas de operación de Capricho: pedidos por la web, la app, la caja
+y domicilios telefónicos; facturas con impuesto y descuentos; pagos con
+comprobante; inventario que baja con cada venta y se repone cada lunes; y
+las transacciones de la pasarela con sus ataques. Nada se inserta "a mano"
+como anomalía o alerta: cada operación pasa por los mismos servicios que usa
+la API, en orden cronológico, así que lo que aparece en el panel es lo que
+los algoritmos realmente encontraron.
 
-La semilla aleatoria es fija (42), igual que en el primer trabajo: siempre
-se generan los mismos datos y los resultados se pueden comparar.
+Casos sembrados a propósito para la demostración:
+  - Kevin Arias (empleado) empieza a dar descuentos y a anular facturas ya
+    cobradas en los últimos 10 días: la estadística por empleado lo detecta.
+  - Comprobantes falsos, reutilizados y que no coinciden con el pago.
+  - Ventanas, ráfagas, hashes alterados, montos atípicos y fraudes
+    silenciosos en la pasarela (los de la primera entrega).
+  - Datos sucios para la auditoría de calidad: clientes duplicados con el
+    correo en mayúsculas, celulares mal escritos, un ítem repetido y un
+    precio con un cero de más.
+
+La semilla aleatoria es fija (42): siempre se generan los mismos datos.
 """
 
-import json
 import random
 from datetime import timedelta
 
-from .errores import ErrorValidacion
+from .errores import ErrorApi
 from .estructuras import merge_sort
 from .seguridad import firmar_transaccion, hashear_password
-from .servicios import catalogo, detector, domicilios
-from .servicios.pedidos import cotizar_pedido
+from .servicios import catalogo, comprobantes, detector, domicilios, facturacion, normalizacion, pagos, pedidos
 from .tiempo import a_texto, ahora, desde_texto
 
 DIAS_DE_HISTORIA = 63
+STOCK_INICIAL = 600
 
+CATEGORIAS = [
+    ("Granizados", "Granizado de café artesanal en tres tamaños"),
+    ("Adiciones", "Galletas y dulces para el granizado"),
+    ("Bebidas", "Bebidas calientes y frías"),
+    ("Postres", "Para acompañar el café"),
+]
 GRANIZADOS = [
     ("Granizado Pequeño", "Granizado de café artesanal, vaso de 12 oz", 7_000, 12),
     ("Granizado Mediano", "Granizado de café artesanal, vaso de 16 oz", 9_000, 16),
@@ -30,6 +47,13 @@ GRANIZADOS = [
 ]
 ADICIONES = ["Galleta Milo", "Galleta Oreo", "Chokis", "Minichips", "Mr Brown", "Chocorramo",
              "Submarino", "ChocoDisk", "WaferJet", "Pingüinos", "Gol", "Piazza"]
+OTROS = [
+    ("Café americano", "Bebidas", "Café de origen colombiano, 8 oz", 4_000),
+    ("Capuchino caliente", "Bebidas", "Espresso con leche espumada, 10 oz", 6_500),
+    ("Agua en botella", "Bebidas", "Agua sin gas, 600 ml", 2_500),
+    ("Brownie", "Postres", "Brownie de chocolate con nueces", 5_000),
+    ("Torta de chocolate", "Postres", "Porción de torta húmeda de chocolate", 7_500),
+]
 
 CLIENTES = [
     ("Laura", "Gómez"), ("Santiago", "Restrepo"), ("Mariana", "Zapata"), ("Andrés", "Mejía"),
@@ -41,17 +65,26 @@ CLIENTES = [
     ("Paulina", "Agudelo"), ("Esteban", "Henao"), ("Juliana", "Marín"), ("Miguel", "Tabares"),
     ("Sara", "Bedoya"), ("Alejandro", "Duque"), ("Natalia", "Suárez"), ("Simón", "Palacio"),
 ]
+# (nombre, correo, turno). Kevin entró hace 30 días y es el caso sospechoso.
+EMPLEADOS = [
+    ("Carolina Ríos", None, "manana"),
+    ("Jhon Pérez", "jhon.perez@capricho.co", "tarde"),
+    ("Marcela Toro", "marcela.toro@capricho.co", "fin"),
+    ("Kevin Arias", "kevin.arias@capricho.co", "tarde"),
+]
 DOMINIOS = ["gmail.com", "hotmail.com", "outlook.com", "correo.co", "yahoo.com"]
 METODOS = ["Nequi"] * 7 + ["Tarjeta"] * 5 + ["Daviplata"] * 3 + ["PSE"] * 2 + ["Efectivo"] * 3
+METODOS_CAJA = ["Efectivo"] * 9 + ["Tarjeta"] * 5 + ["Nequi"] * 4 + ["Daviplata"] * 2 + ["Transferencia"]
 VALORES = [7_000, 9_000, 9_000, 11_000, 12_000, 14_000, 16_000, 18_000, 21_000, 24_000, 27_000, 32_000, 38_000]
 
 # Cada cliente tiene hábitos, como en la realidad: un método de pago que usa
-# casi siempre, un tipo de pedido y un horario. Es lo que aprende la IA.
+# casi siempre, un tamaño de pedido, un horario y un canal. Es lo que aprende la IA.
 MONTOS_PERFIL = {
     "antojo": [7_000, 9_000, 9_000, 11_000, 12_000],
     "combo": [14_000, 16_000, 18_000, 21_000, 24_000],
     "familiar": [27_000, 32_000, 38_000, 45_000],
 }
+GRANIZADOS_PERFIL = {"antojo": (1, 1), "combo": (1, 2), "familiar": (3, 4)}
 HORARIOS_PERFIL = [8, 10, 13, 16, 19]
 
 HORAS_NORMALES = {6: 1, 7: 3, 8: 5, 9: 6, 10: 6, 11: 5, 12: 5, 13: 4, 14: 5, 15: 6, 16: 7,
@@ -67,6 +100,10 @@ NOTAS = {
                    "El cliente confirmó las compras por teléfono",
                    "Reintentos de la app por mala conexión, no es fraude"],
 }
+MOTIVOS_DESCUENTO = ["Cliente frecuente", "Cortesía de la casa", "Cumpleaños del cliente"]
+MOTIVOS_KEVIN = ["Cortesía", "Amigo de la casa", "Cliente frecuente", "Promoción"]
+MOTIVOS_ANULACION = ["Error al digitar el pedido", "El cliente cambió el pedido"]
+MOTIVOS_ANULACION_KEVIN = ["El cliente se arrepintió", "Pedido duplicado", "Devolución del dinero"]
 
 EVENTOS = [
     ("INYECCION_SQL", "CRITICO", "POST", "/api/auth/login", "email", "' OR '1'='1' --"),
@@ -90,143 +127,322 @@ def _instante(rng, dia, hora):
                            milliseconds=rng.randrange(1000))
 
 
-def sembrar_base(db, config):
-    """Lo mínimo para que la tienda funcione: reglas, productos y cuentas."""
+# =============================================================================
+#  Datos base: reglas, categorías, ítems y cuentas
+# =============================================================================
+
+def sembrar_base(db, config, stock=STOCK_INICIAL):
+    """Lo mínimo para que la tienda funcione."""
     creado = a_texto(ahora().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=90))
     detector.guardar_reglas(db, detector.REGLAS_POR_DEFECTO, confirmar=False)
 
-    # --- Productos -----------------------------------------------------------
-    for nombre, descripcion, precio, onzas in GRANIZADOS:
-        db.execute(
-            """INSERT INTO productos (nombre, descripcion, categoria, precio, onzas, imagen, activo,
-                                      fecha_creacion, fecha_actualizacion)
-               VALUES (?, ?, 'GRANIZADO', ?, ?, 'menu.jpg', 1, ?, ?)""",
-            (nombre, descripcion, precio, onzas, creado, creado))
-    for nombre in ADICIONES:
-        db.execute(
-            """INSERT INTO productos (nombre, descripcion, categoria, precio, onzas, imagen, activo,
-                                      fecha_creacion, fecha_actualizacion)
-               VALUES (?, 'Adición para tu granizado', 'ADICION', 2000, NULL, NULL, 1, ?, ?)""",
-            (nombre, creado, creado))
+    categoria_id = {}
+    for nombre, descripcion in CATEGORIAS:
+        cursor = db.execute(
+            """INSERT INTO categorias (nombre, clave, descripcion, activo, fecha_creacion, fecha_actualizacion)
+               VALUES (?, ?, ?, 1, ?, ?)""", (nombre, normalizacion.clave(nombre), descripcion, creado, creado))
+        categoria_id[nombre] = cursor.lastrowid
 
-    # --- Cuentas -------------------------------------------------------------
+    productos = [(n, d, "Granizados", "GRANIZADO", p, o, "menu.jpg", 40) for n, d, p, o in GRANIZADOS]
+    productos += [(n, "Adición para tu granizado", "Adiciones", "ADICION", 2_000, None, None, 30) for n in ADICIONES]
+    productos += [(n, d, c, "OTRO", p, None, None, 15) for n, c, d, p in OTROS]
+    for nombre, descripcion, categoria, tipo, precio, onzas, imagen, minimo in productos:
+        cursor = db.execute(
+            """INSERT INTO productos (nombre, descripcion, categoria_id, tipo, precio, onzas, imagen, stock, stock_minimo,
+                                      activo, fecha_creacion, fecha_actualizacion)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+            (nombre, descripcion, categoria_id[categoria], tipo, precio, onzas, imagen, stock, minimo, creado, creado))
+        db.execute("""INSERT INTO movimientos_inventario (producto_id, cantidad, motivo, fecha)
+                      VALUES (?, ?, 'ENTRADA', ?)""", (cursor.lastrowid, stock, creado))
+
     cuentas = [
         ("Administrador Capricho", config["ADMIN_EMAIL"], "3000000000", config["ADMIN_PASSWORD"], "ADMIN"),
         ("Valentina Restrepo", config["CLIENTE_DEMO_EMAIL"], "3001234567", config["CLIENTE_DEMO_PASSWORD"], "CLIENTE"),
+        ("Consumidor Final", pedidos.CONSUMIDOR_FINAL, None, None, "CLIENTE"),
     ]
+    for posicion, (nombre, email, _turno) in enumerate(EMPLEADOS):
+        cuentas.append((nombre, email or config["EMPLEADO_DEMO_EMAIL"], f"31000000{posicion:02d}",
+                        config["EMPLEADO_DEMO_PASSWORD"], "EMPLEADO"))
     for nombre, email, telefono, password, rol in cuentas:
         db.execute(
             """INSERT INTO usuarios (nombre, email, telefono, password_hash, rol, fecha_creacion, fecha_actualizacion)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (nombre, email, telefono, hashear_password(password), rol, creado, creado))
+            (nombre, email, telefono, hashear_password(password) if password else None, rol, creado, creado))
     db.commit()
 
 
-def sembrar(db, estado, config):
-    """Datos base + 9 semanas de historia pasadas por el detector."""
-    rng = random.Random(42)
-    momento_actual = ahora()
-    hoy = momento_actual.replace(hour=0, minute=0, second=0, microsecond=0)
-    creado = a_texto(hoy - timedelta(days=90))
-    llave = config["LLAVE_HMAC"]
-    sembrar_base(db, config)
+# =============================================================================
+#  Historia completa
+# =============================================================================
 
-    correos = [config["CLIENTE_DEMO_EMAIL"]]
-    perfiles = {}
-    for nombre, apellido in CLIENTES:
-        email = f"{_sin_tildes(nombre)}.{_sin_tildes(apellido)}@{rng.choice(DOMINIOS)}".lower()
-        telefono = "3" + "".join(str(rng.randrange(10)) for _ in range(9))
-        db.execute(
-            """INSERT INTO usuarios (nombre, email, telefono, fecha_creacion, fecha_actualizacion)
-               VALUES (?, ?, ?, ?, ?)""",
-            (f"{nombre} {apellido}", email, telefono, creado, creado))
-        correos.append(email)
-    for email in correos:
-        perfiles[email] = {
-            "metodo": rng.choice(METODOS),
-            "montos": MONTOS_PERFIL[rng.choices(list(MONTOS_PERFIL), weights=[5, 4, 2])[0]],
-            "hora": rng.choice(HORARIOS_PERFIL),
-        }
-    estado.reconstruir(db)
+class _Historia:
+    """Arma la lista de eventos de 9 semanas y los ejecuta en orden cronológico."""
 
-    def compra_habitual(dia):
-        """Una compra normal: casi siempre dentro de los hábitos del cliente."""
-        email = rng.choice(correos)
-        perfil = perfiles[email]
-        if rng.random() < 0.85:
-            hora = min(22, max(6, round(rng.gauss(perfil["hora"], 1.5))))
-        else:
-            hora = _pesos(rng, HORAS_NORMALES)
-        valor = rng.choice(perfil["montos"]) if rng.random() < 0.85 else rng.choice(VALORES)
-        metodo = perfil["metodo"] if rng.random() < 0.8 else rng.choice(METODOS)
-        return ("normal", _instante(rng, dia, hora), email, valor, metodo)
+    def __init__(self, db, estado, config):
+        self.db, self.estado, self.config = db, estado, config
+        self.rng = random.Random(42)
+        self.momento_actual = ahora()
+        self.hoy = self.momento_actual.replace(hour=0, minute=0, second=0, microsecond=0)
+        self.creado = a_texto(self.hoy - timedelta(days=90))
+        self.comprobantes_usados = []
+        self.productos = catalogo.listar(db)
+        self.por_tipo = {t: [p for p in self.productos if p["tipo"] == t] for t in ("GRANIZADO", "ADICION", "OTRO")}
+        self.empleados = {fila["nombre"]: dict(fila) for fila in db.execute(
+            "SELECT id, nombre, email FROM usuarios WHERE rol = 'EMPLEADO'")}
 
-    # --- Historia de 9 semanas: así "30 días" se compara con los 30 anteriores ---
-    eventos = []
-    for dias_atras in range(DIAS_DE_HISTORIA - 1, -1, -1):
-        dia = hoy - timedelta(days=dias_atras)
-        cantidad = rng.randint(30, 50) + (12 if dia.weekday() >= 5 else 0)
-        for _ in range(cantidad):
-            eventos.append(compra_habitual(dia))
+    # --- clientes con hábitos --------------------------------------------------
+    def crear_clientes(self):
+        rng = self.rng
+        correos = [self.config["CLIENTE_DEMO_EMAIL"]]
+        for nombre, apellido in CLIENTES:
+            email = f"{_sin_tildes(nombre)}.{_sin_tildes(apellido)}@{rng.choice(DOMINIOS)}".lower()
+            telefono = "3" + "".join(str(rng.randrange(10)) for _ in range(9))
+            self.db.execute(
+                """INSERT INTO usuarios (nombre, email, telefono, fecha_creacion, fecha_actualizacion)
+                   VALUES (?, ?, ?, ?, ?)""", (f"{nombre} {apellido}", email, telefono, self.creado, self.creado))
+            correos.append(email)
+        self.correos = correos
+        self.usuarios = {f["email"]: dict(f) for f in self.db.execute("SELECT id, nombre, email FROM usuarios")}
+        self.perfiles = {}
+        for email in correos:
+            tamano = rng.choices(list(MONTOS_PERFIL), weights=[5, 4, 2])[0]
+            self.perfiles[email] = {
+                "metodo": rng.choice(METODOS), "tamano": tamano, "montos": MONTOS_PERFIL[tamano],
+                "hora": rng.choice(HORARIOS_PERFIL), "canal": rng.choice(["WEB", "WEB", "APP"]),
+                "domicilio": rng.random() < 0.65, "barrio": rng.choice([b for b in domicilios.BARRIOS
+                                                                        if b != domicilios.TIENDA]),
+            }
+        self.estado.reconstruir(self.db)
 
+    def hora_habitual(self, email):
+        perfil = self.perfiles[email]
+        if self.rng.random() < 0.85:
+            return min(22, max(6, round(self.rng.gauss(perfil["hora"], 1.5))))
+        return _pesos(self.rng, HORAS_NORMALES)
+
+    # --- armar pedidos --------------------------------------------------------
+    def items_granizado(self, cuantos):
+        rng = self.rng
+        items = []
+        for _ in range(cuantos):
+            extras = rng.sample(self.por_tipo["ADICION"], rng.choice([0, 1, 1, 2]))
+            items.append({"producto_id": rng.choice(self.por_tipo["GRANIZADO"])["id"],
+                          "sabor": rng.choice(catalogo.SABORES), "cantidad": 1,
+                          "adiciones": sorted(a["id"] for a in extras), "precio_unitario": None})
+        return items
+
+    def items_caja(self):
+        rng = self.rng
+        items = self.items_granizado(rng.choice([0, 1, 1, 1, 2]))
+        for producto in rng.sample(self.por_tipo["OTRO"], rng.choice([0, 0, 1, 1, 2])):
+            items.append({"producto_id": producto["id"], "sabor": None, "cantidad": rng.choice([1, 1, 2]),
+                          "adiciones": []})
+        return items or self.items_granizado(1)
+
+    def entrega(self, email, forzar=None):
+        perfil = self.perfiles.get(email)
+        domicilio = forzar if forzar is not None else (perfil["domicilio"] if perfil else False)
+        if not domicilio:
+            return {"tipo_entrega": "RECOGER", "barrio": None, "direccion": None}
+        rng = self.rng
+        return {"tipo_entrega": "DOMICILIO", "barrio": perfil["barrio"] if perfil else rng.choice(domicilios.BARRIOS[1:]),
+                "direccion": f"Calle {rng.randint(30, 110)} # {rng.randint(20, 80)}-{rng.randint(10, 99)}"}
+
+    # --- generar eventos ------------------------------------------------------
+    def empleado_de_turno(self, dia, hora, dias_atras):
+        if dia.weekday() >= 5:
+            return "Marcela Toro"
+        if hora < 13:
+            return "Carolina Ríos"
+        if dias_atras < 30 and dia.weekday() in (1, 3, 4) and self.rng.random() < 0.7:
+            return "Kevin Arias"
+        return "Jhon Pérez"
+
+    def eventos(self):
+        rng = self.rng
+        eventos = []
+        for dias_atras in range(DIAS_DE_HISTORIA - 1, -1, -1):
+            dia = self.hoy - timedelta(days=dias_atras)
+            fin = dia.weekday() >= 5
+            if dia.weekday() == 0:
+                eventos.append(("reposicion", dia + timedelta(hours=6), {}))
+            for _ in range(rng.randint(12, 20) + (5 if fin else 0)):          # web y app
+                email = rng.choice(self.correos)
+                eventos.append(("web", _instante(rng, dia, self.hora_habitual(email)), {"email": email}))
+            for _ in range(rng.randint(10, 18) + (8 if fin else 0)):          # caja presencial
+                hora = _pesos(rng, HORAS_NORMALES)
+                eventos.append(("caja", _instante(rng, dia, hora),
+                                {"empleado": self.empleado_de_turno(dia, hora, dias_atras), "dias_atras": dias_atras}))
+            for _ in range(rng.randint(2, 6)):                                # domicilio por teléfono
+                hora = _pesos(rng, HORAS_NORMALES)
+                eventos.append(("domicilio", _instante(rng, dia, hora),
+                                {"empleado": self.empleado_de_turno(dia, hora, dias_atras), "dias_atras": dias_atras,
+                                 "email": rng.choice(self.correos[1:])}))
+            for _ in range(rng.randint(8, 14)):                               # pasarela (API), compras normales
+                email = rng.choice(self.correos)
+                perfil = self.perfiles[email]
+                eventos.append(("api", _instante(rng, dia, self.hora_habitual(email)), {
+                    "email": email,
+                    "valor": rng.choice(perfil["montos"]) if rng.random() < 0.85 else rng.choice(VALORES),
+                    "metodo": perfil["metodo"] if rng.random() < 0.8 else rng.choice(METODOS)}))
+            eventos += self.ataques_pasarela(dia)
+        return [e for e in eventos if e[1] <= self.momento_actual - timedelta(minutes=5)]
+
+    def ataques_pasarela(self, dia):
+        """Los ataques de la primera entrega, para el dashboard antifraude."""
+        rng = self.rng
+        eventos = []
         if rng.random() < 0.75:                                  # 3 o 4 en la ventana
             inicio = _instante(rng, dia, _pesos(rng, HORAS_FRAUDE))
-            usuario = rng.choice(correos)
+            usuario = rng.choice(self.correos)
             for n in range(rng.choice([3, 3, 3, 4])):
-                eventos.append(("normal", inicio + timedelta(seconds=n * rng.uniform(0.35, 0.85)),
-                                usuario, rng.choice(VALORES), None))
+                eventos.append(("api", inicio + timedelta(seconds=n * rng.uniform(0.35, 0.85)),
+                                {"email": usuario, "valor": rng.choice(VALORES), "metodo": rng.choice(METODOS)}))
         if rng.random() < 0.2:                                   # ráfaga: 5 o 6 en menos de 1 s
             inicio = _instante(rng, dia, _pesos(rng, HORAS_FRAUDE))
-            usuario = rng.choice(correos)
+            usuario = rng.choice(self.correos)
             for n in range(rng.choice([5, 6])):
-                eventos.append(("normal", inicio + timedelta(milliseconds=n * rng.randint(110, 170)),
-                                usuario, rng.choice(VALORES), None))
+                eventos.append(("api", inicio + timedelta(milliseconds=n * rng.randint(110, 170)),
+                                {"email": usuario, "valor": rng.choice(VALORES), "metodo": rng.choice(METODOS)}))
         if rng.random() < 0.3:                                   # alguien alteró el valor
-            eventos.append(("hash_alterado", _instante(rng, dia, _pesos(rng, HORAS_FRAUDE)),
-                            rng.choice(correos), rng.choice(VALORES), None))
+            eventos.append(("api", _instante(rng, dia, _pesos(rng, HORAS_FRAUDE)),
+                            {"email": rng.choice(self.correos), "valor": rng.choice(VALORES),
+                             "metodo": rng.choice(METODOS), "alterado": True}))
         if rng.random() < 0.22:                                  # monto atípico
-            eventos.append(("normal", _instante(rng, dia, _pesos(rng, HORAS_FRAUDE)),
-                            rng.choice(correos), rng.randrange(320, 1500) * 1000, None))
+            eventos.append(("api", _instante(rng, dia, _pesos(rng, HORAS_FRAUDE)),
+                            {"email": rng.choice(self.correos), "valor": rng.randrange(320, 1500) * 1000,
+                             "metodo": rng.choice(METODOS)}))
         # Fraude silencioso: ninguna regla lo ve. Para entrenar la IA se siembra
         # SIN estos casos (histórico revisado); la demo sí los trae.
-        if rng.random() < 0.12 and config.get("SEMBRAR_FRAUDES_SILENCIOSOS", True):
-            victima = rng.choice(correos)
-            otro_metodo = rng.choice([m for m in sorted(set(METODOS)) if m != perfiles[victima]["metodo"]])
-            eventos.append(("normal", _instante(rng, dia, rng.choice([1, 2, 3, 4])), victima,
-                            rng.randrange(150, 290) * 1000, otro_metodo))
+        if rng.random() < 0.12 and self.config.get("SEMBRAR_FRAUDES_SILENCIOSOS", True):
+            victima = rng.choice(self.correos)
+            otro = rng.choice([m for m in sorted(set(METODOS)) if m != self.perfiles[victima]["metodo"]])
+            eventos.append(("api", _instante(rng, dia, rng.choice([1, 2, 3, 4])),
+                            {"email": victima, "valor": rng.randrange(150, 290) * 1000, "metodo": otro}))
         if rng.random() < 0.1:                                   # precio manipulado en la tienda
             eventos.append(("precio", _instante(rng, dia, _pesos(rng, HORAS_NORMALES)),
-                            rng.choice(correos), rng.choice([2_000, 3_000, 5_000]), None))
-        if dias_atras <= 12:                                     # pedidos de la tienda
-            for _ in range(rng.randint(1, 3)):
-                eventos.append(("pedido", _instante(rng, dia, _pesos(rng, HORAS_NORMALES)),
-                                rng.choice(correos[:12]), None, None))
+                            {"email": rng.choice(self.correos), "valor": rng.choice([2_000, 3_000, 5_000])}))
+        return eventos
 
-    eventos = [e for e in eventos if e[1] <= momento_actual - timedelta(minutes=5)]
-    eventos = merge_sort(eventos, clave=lambda e: e[1])          # orden cronológico
+    # --- ejecutar ---------------------------------------------------------------
+    def ejecutar(self, eventos):
+        eventos = merge_sort(eventos, clave=lambda e: e[1])          # orden cronológico
+        for numero, (tipo, instante, datos) in enumerate(eventos, start=1):
+            try:
+                getattr(self, f"_{tipo}")(numero, instante, datos)
+            except ErrorApi:
+                continue          # sin inventario o datos que el sistema rechaza: igual que en la realidad
 
-    pedidos = []
-    for numero, (tipo, instante, email, valor, metodo) in enumerate(eventos, start=1):
-        if tipo == "pedido":
-            pedidos.append(_pedido(db, estado, rng, instante, email))
-            continue
-        txn = {"id_txn": str(100000 + numero), "email": email, "fecha": instante,
-               "valor": valor, "metodo_pago": metodo or rng.choice(METODOS)}
-        externo = {"idTxn": txn["id_txn"], "user": email, "date": a_texto(instante),
-                   "value": valor, "paymentMethod": txn["metodo_pago"]}
-        txn["hash"] = firmar_transaccion(externo, llave)
+    def _reposicion(self, _numero, instante, _datos):
+        momento = a_texto(instante)
+        for fila in self.db.execute("SELECT id, stock FROM productos").fetchall():
+            if fila["stock"] < STOCK_INICIAL:
+                self.db.execute("UPDATE productos SET stock = ? WHERE id = ?", (STOCK_INICIAL, fila["id"]))
+                self.db.execute("""INSERT INTO movimientos_inventario (producto_id, cantidad, motivo, fecha)
+                                   VALUES (?, ?, 'ENTRADA', ?)""", (fila["id"], STOCK_INICIAL - fila["stock"], momento))
+        self.db.commit()
+
+    def _web(self, _numero, instante, datos):
+        email = datos["email"]
+        perfil = self.perfiles[email]
+        minimo, maximo = GRANIZADOS_PERFIL[perfil["tamano"]]
+        pedido = {"items": self.items_granizado(self.rng.randint(minimo, maximo)), **self.entrega(email),
+                  "metodo_pago": perfil["metodo"] if self.rng.random() < 0.8 else self.rng.choice(METODOS[:-3])}
+        pedido["total"] = pedidos.cotizar_pedido(self.db, pedido)[3]
+        pedidos.crear(self.db, self.estado, self.config, self.usuarios[email], pedido, momento=instante,
+                      canal=perfil["canal"], demo=True)
+
+    def _caja(self, _numero, instante, datos, canal="PRESENCIAL", email=None):
+        rng = self.rng
+        empleado = self.empleados[datos["empleado"]]
+        kevin = datos["empleado"] == "Kevin Arias" and datos["dias_atras"] < 10
+        if kevin and rng.random() < 0.55:
+            porcentaje, motivo = rng.choice([20, 25, 30, 40, 50]), rng.choice(MOTIVOS_KEVIN)
+        elif rng.random() < 0.06:
+            porcentaje, motivo = 10, rng.choice(MOTIVOS_DESCUENTO)
+        else:
+            porcentaje, motivo = 0, None
+        if email is None and rng.random() < 0.3:
+            email = rng.choice(self.correos)
+        pedido = {"items": self.items_caja(), "canal": canal, **self.entrega(email, forzar=canal == "DOMICILIO"),
+                  "metodo_pago": rng.choice(METODOS_CAJA), "cliente_email": email,
+                  "descuento_porcentaje": porcentaje, "motivo_descuento": motivo}
+        resultado = pedidos.crear_en_caja(self.db, self.estado, self.config, empleado, pedido, momento=instante, demo=True)
+        factura = resultado["factura"]
+        pago = instante + timedelta(minutes=rng.randint(1, 4))
+        self.pagar(factura, pedido["metodo_pago"], empleado, pago)
+        anula = (kevin and rng.random() < 0.3) or rng.random() < 0.02
+        if anula:
+            motivo = rng.choice(MOTIVOS_ANULACION_KEVIN if kevin else MOTIVOS_ANULACION)
+            facturacion.anular(self.db, self.estado, factura["id"], motivo, empleado,
+                               momento=pago + timedelta(minutes=rng.randint(10, 90)), demo=True)
+
+    def _domicilio(self, numero, instante, datos):
+        self._caja(numero, instante, datos, canal="DOMICILIO", email=datos["email"])
+
+    def pagar(self, factura, metodo, empleado, momento):
+        """Pago en caja; los de transferencia llevan comprobante y algunos son trampas."""
+        rng = self.rng
+        monto = factura["total"]
+        archivo = None
+        if metodo in pagos.METODOS_CON_COMPROBANTE:
+            caso = rng.random()
+            if caso < 0.04 and self.comprobantes_usados:                  # el mismo comprobante otra vez
+                archivo = rng.choice(self.comprobantes_usados)
+            else:
+                llave = self.config["LLAVE_HMAC"]
+                monto_comprobante = monto
+                if caso < 0.07:
+                    llave = b"llave-de-un-falsificador"                    # comprobante falso
+                elif caso < 0.09:
+                    monto_comprobante = max(1_000, monto - rng.choice([5_000, 10_000]))   # no coincide
+                datos = {"referencia": f"{metodo[:3].upper()}{rng.randrange(10 ** 9):09d}", "metodo": metodo,
+                         "monto": monto_comprobante, "fecha": a_texto(momento)[:19], "pagador": factura["cliente"]}
+                archivo = (comprobantes.generar_pdf(datos, llave), f"comprobante-{datos['referencia']}.pdf")
+                if len(self.comprobantes_usados) < 40:
+                    self.comprobantes_usados.append(archivo)
+        pagos.registrar(self.db, self.estado, self.config, factura["id"], {"metodo": metodo, "monto": monto},
+                        archivo, quien=empleado, momento=momento, origen="DEMO", demo=True)
+
+    def _api(self, numero, instante, datos):
+        txn = {"id_txn": str(100000 + numero), "email": datos["email"], "fecha": instante,
+               "valor": datos["valor"], "metodo_pago": datos["metodo"]}
+        externo = {"idTxn": txn["id_txn"], "user": txn["email"], "date": a_texto(instante),
+                   "value": txn["valor"], "paymentMethod": txn["metodo_pago"]}
+        txn["hash"] = firmar_transaccion(externo, self.config["LLAVE_HMAC"])
         txn["hash_valido"] = True
-        if tipo == "hash_alterado":
-            txn["valor"] = valor * 10         # llegó un valor distinto al firmado
+        if datos.get("alterado"):
+            txn["valor"] = datos["valor"] * 10         # llegó un valor distinto al firmado
             txn["hash_valido"] = False
-        if tipo == "precio":
-            _precio_manipulado(db, estado, txn, instante, rng)
-            continue
-        detector.procesar_transaccion(db, estado, txn, origen="DEMO", llegada=instante, confirmar=False)
+        detector.procesar_transaccion(self.db, self.estado, txn, origen="DEMO", llegada=instante, canal="API",
+                                      confirmar=False)
 
-    _avanzar_pedidos(db, pedidos, momento_actual)
-    _revisar_anomalias(db, rng, momento_actual, config["ADMIN_EMAIL"])
-    _eventos(db, rng, hoy, momento_actual)
+    def _precio(self, _numero, instante, datos):
+        rng = self.rng
+        real = rng.choice([9_000, 12_000, 16_000, 21_000])
+        anomalia = detector._anomalia(
+            "PRECIO_MANIPULADO", "ALTO", 1, 0,
+            f"El navegador envió un total de {detector.dinero(datos['valor'])} y el servidor calculó "
+            f"{detector.dinero(real)}. Se alteró el precio en el localStorage.")
+        txn = {"id_txn": f"CAP-{instante:%Y%m%d%H%M%S}-{rng.randrange(16 ** 6):06X}", "email": datos["email"],
+               "fecha": instante, "valor": datos["valor"], "metodo_pago": rng.choice(METODOS), "hash_valido": True}
+        txn["hash"] = firmar_transaccion(detector._formato_externo(txn), self.config["LLAVE_HMAC"])
+        usuario_id, _ = self.estado.indice_usuarios.buscar(datos["email"])
+        detector._guardar(self.db, self.estado, usuario_id, txn, "RECHAZADA", [anomalia], "DEMO", None, instante, "WEB")
+
+
+def sembrar(db, estado, config):
+    """Datos base + 9 semanas de operación pasadas por los mismos servicios de la API."""
+    sembrar_base(db, config)
+    historia = _Historia(db, estado, config)
+    historia.crear_clientes()
+    historia.ejecutar(historia.eventos())
+    db.commit()
+    _avanzar_pedidos(db, historia.momento_actual)
+    _revisar_anomalias(db, historia.rng, historia.momento_actual, config["ADMIN_EMAIL"])
+    _revisar_alertas(db, historia.rng, historia.momento_actual)
+    _eventos(db, historia.rng, historia.hoy, historia.momento_actual)
+    _datos_sucios(db, historia.creado)
     db.commit()
     estado.reconstruir(db)
 
@@ -235,75 +451,24 @@ def _sin_tildes(texto):
     return texto.translate(str.maketrans("áéíóúÁÉÍÓÚñÑ", "aeiouAEIOUnN"))
 
 
-def _precio_manipulado(db, estado, txn, instante, rng):
-    real = rng.choice([9_000, 12_000, 16_000, 21_000])
-    anomalia = detector._anomalia(
-        "PRECIO_MANIPULADO", "ALTO", 1, 0,
-        f"El navegador envió un total de {detector.dinero(txn['valor'])} y el servidor calculó "
-        f"{detector.dinero(real)}. Se alteró el precio en el localStorage.")
-    txn["id_txn"] = f"CAP-{instante:%Y%m%d%H%M%S}-{rng.randrange(16 ** 6):06X}"
-    usuario_id, _ = estado.indice_usuarios.buscar(txn["email"])
-    detector._guardar(db, estado, usuario_id, txn, "RECHAZADA", [anomalia], "DEMO", None, instante)
-
-
-def _pedido(db, estado, rng, instante, email):
-    productos = catalogo.listar(db)
-    granizados = [p for p in productos if p["categoria"] == "GRANIZADO"]
-    adiciones = [p for p in productos if p["categoria"] == "ADICION"]
-    items = []
-    for _ in range(rng.choice([1, 1, 2, 2, 3])):
-        extras = rng.sample(adiciones, rng.choice([0, 1, 1, 2]))
-        granizado = rng.choice(granizados)
-        items.append({"producto_id": granizado["id"], "sabor": rng.choice(catalogo.SABORES),
-                      "cantidad": rng.choice([1, 1, 2]), "adiciones": sorted(a["id"] for a in extras),
-                      "precio_unitario": granizado["precio"] + sum(a["precio"] for a in extras)})
-    domicilio = rng.random() < 0.75
-    barrio = rng.choice([b for b in domicilios.BARRIOS if b != domicilios.TIENDA])
-    datos = {"items": items, "tipo_entrega": "DOMICILIO" if domicilio else "RECOGER",
-             "barrio": barrio if domicilio else None,
-             "direccion": f"Calle {rng.randint(30, 110)} # {rng.randint(20, 80)}-{rng.randint(10, 99)}" if domicilio else None,
-             "metodo_pago": rng.choice(METODOS)}
-    try:
-        lineas, subtotal, tarifa, total, _, entrega = cotizar_pedido(db, datos)
-    except ErrorValidacion:
-        return None
-    txn = detector.transaccion_de_tienda(estado, email, total, datos["metodo_pago"], instante)
-    resultado = detector.procesar_transaccion(db, estado, txn, origen="DEMO", llegada=instante, confirmar=False)
-    usuario_id, _ = estado.indice_usuarios.buscar(email)
-    cursor = db.execute(
-        """INSERT INTO pedidos (usuario_id, transaccion_id, estado, tipo_entrega, barrio, direccion, ruta,
-                                distancia_km, subtotal, domicilio, total, metodo_pago, fecha_creacion,
-                                fecha_actualizacion)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (usuario_id, resultado["id"], "RECHAZADO" if resultado["estado"] == "RECHAZADA" else "SOLICITADO",
-         datos["tipo_entrega"], datos["barrio"], datos["direccion"],
-         json.dumps(entrega["ruta"], ensure_ascii=False) if entrega else None,
-         entrega["distancia_km"] if entrega else 0, subtotal, tarifa, total, datos["metodo_pago"],
-         a_texto(instante), a_texto(instante)))
-    for linea in lineas:
-        db.execute(
-            """INSERT INTO pedido_items (pedido_id, producto_id, nombre, sabor, adiciones, cantidad,
-                                         precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (cursor.lastrowid, linea["producto_id"], linea["nombre"], linea["sabor"],
-             json.dumps(linea["adiciones"], ensure_ascii=False), linea["cantidad"],
-             linea["precio_unitario"], linea["subtotal"]))
-    return cursor.lastrowid, instante
-
-
-def _avanzar_pedidos(db, pedidos, momento_actual):
-    """Los viejos ya se entregaron; los 2 más recientes siguen en proceso o en cola."""
-    pedidos = [p for p in pedidos if p]
-    for posicion, (pedido_id, instante) in enumerate(pedidos):
-        restantes = len(pedidos) - posicion
+def _avanzar_pedidos(db, momento_actual):
+    """Los pedidos viejos ya se entregaron; los 5 más recientes siguen en proceso o en la cola."""
+    filas = db.execute("SELECT id, fecha_creacion FROM pedidos WHERE estado = 'SOLICITADO' ORDER BY fecha_creacion, id"
+                       ).fetchall()
+    for posicion, fila in enumerate(filas):
+        restantes = len(filas) - posicion
+        instante = desde_texto(fila["fecha_creacion"])
         if restantes > 5:
             nuevo, cuando = "ENTREGADO", instante + timedelta(minutes=35)
         elif restantes == 5:
             nuevo, cuando = "EN_PROCESO", instante + timedelta(minutes=10)
         else:
             continue                          # se quedan SOLICITADOS, en la cola
-        db.execute(
-            "UPDATE pedidos SET estado = ?, fecha_actualizacion = ? WHERE id = ? AND estado = 'SOLICITADO'",
-            (nuevo, a_texto(min(cuando, momento_actual)), pedido_id))
+        db.execute("UPDATE pedidos SET estado = ?, fecha_actualizacion = ? WHERE id = ?",
+                   (nuevo, a_texto(min(cuando, momento_actual)), fila["id"]))
+    # Lo que quedó pendiente de pago hace más de un día no se va a pagar: se cancela.
+    db.execute("UPDATE pedidos SET estado = 'RECHAZADO' WHERE estado = 'PENDIENTE_PAGO' AND fecha_creacion < ?",
+               (a_texto(momento_actual - timedelta(days=1)),))
 
 
 def _revisar_anomalias(db, rng, momento_actual, admin):
@@ -335,6 +500,14 @@ def _revisar_anomalias(db, rng, momento_actual, admin):
                    (final, a_texto(cuando), fila["id"]))
 
 
+def _revisar_alertas(db, rng, momento_actual):
+    """Las alertas de hace más de 3 días ya las revisó el administrador."""
+    limite = a_texto(momento_actual - timedelta(days=3))
+    for fila in db.execute("SELECT id FROM alertas WHERE fecha < ?", (limite,)).fetchall():
+        db.execute("UPDATE alertas SET estado = ? WHERE id = ?",
+                   (rng.choices(["REVISADA", "DESCARTADA"], weights=[70, 30])[0], fila["id"]))
+
+
 def _eventos(db, rng, hoy, momento_actual):
     for numero in range(26):
         tipo, nivel, metodo, ruta, campo, texto = rng.choice(EVENTOS)
@@ -346,3 +519,28 @@ def _eventos(db, rng, hoy, momento_actual):
                VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 1)""",
             (tipo, nivel, detalle, ruta, metodo, f"181.{rng.randint(50, 60)}.{rng.randint(0, 255)}.{rng.randint(1, 254)}",
              1 if numero < 19 else 0, a_texto(cuando)))
+
+
+def _datos_sucios(db, creado):
+    """Lo que encuentra cualquier negocio real en su base de datos: la
+    auditoría de calidad (servicios/calidad.py) debe encontrar cada caso."""
+    clientes = [
+        ("laura  gomez", "Laura.Gomez@Gmail.com", "+57 300 555 1212"),          # duplicado de un cliente sembrado
+        ("SANTIAGO RESTREPO", "santiago.r@hotmail.com", "300-555-3434"),        # mismo nombre, otro correo
+        ("Ana María Ríos", "ana.rios@correo.co", "3005556789"),
+        ("Ana Maria Rios", "anamaria.rios@gmail.com", "300 555 6789"),          # mismo celular escrito distinto
+        ("Pedro Pablo Gil", "pedro.gil@correo.co", "12345"),                    # celular inválido
+    ]
+    for nombre, email, telefono in clientes:
+        db.execute("""INSERT INTO usuarios (nombre, email, telefono, fecha_creacion, fecha_actualizacion)
+                      VALUES (?, ?, ?, ?, ?)""", (nombre, email, telefono, creado, creado))
+    adiciones = db.execute("SELECT id FROM categorias WHERE clave = 'adicion'").fetchone()["id"]
+    postres = db.execute("SELECT id FROM categorias WHERE clave = 'postre'").fetchone()["id"]
+    for nombre, categoria, precio in (("galleta  oreo", adiciones, 2_000),           # ítem repetido
+                                      ("Torta de zanahoria", postres, 75_000)):      # un cero de más
+        db.execute(
+            """INSERT INTO productos (nombre, descripcion, categoria_id, tipo, precio, stock, stock_minimo, activo,
+                                      fecha_creacion, fecha_actualizacion)
+               VALUES (?, 'Registrado a mano', ?, 'OTRO', ?, 0, 0, 0, ?, ?)""", (nombre, categoria, precio, creado, creado))
+    # El primer cliente sembrado comparte celular con su duplicado.
+    db.execute("UPDATE usuarios SET telefono = '3005551212' WHERE email LIKE 'laura.gomez@%' AND email != 'Laura.Gomez@Gmail.com'")

@@ -69,6 +69,9 @@ def _cargar_ia():
 def _preparar_base_de_datos(app, estado):
     from .semilla import sembrar, sembrar_base
 
+    respaldo = db.respaldar_si_es_antigua(app.config["BASE_DATOS"])
+    if respaldo:
+        logger.warning("La base de datos era de una versión anterior: se guardó en %s y se crea una nueva", respaldo)
     conexion = db.conectar(app.config["BASE_DATOS"])
     try:
         db.crear_esquema(conexion)
@@ -91,11 +94,11 @@ def _preparar_base_de_datos(app, estado):
 
 
 def _registrar_rutas(app):
-    from .rutas import (api_admin, api_auth, api_domicilios, api_ia, api_laboratorio, api_pedidos,
-                        api_productos, api_transacciones, paginas)
+    from .rutas import (api_admin, api_auth, api_caja, api_domicilios, api_gestion, api_ia, api_laboratorio,
+                        api_pedidos, api_productos, api_transacciones, paginas)
 
     for modulo in (paginas, api_auth, api_productos, api_domicilios, api_transacciones,
-                   api_pedidos, api_admin, api_laboratorio, api_ia):
+                   api_pedidos, api_admin, api_laboratorio, api_ia, api_gestion, api_caja):
         app.register_blueprint(modulo.bp)
 
     # Nombres alternativos del endpoint, por si el generador del profesor usa otro.

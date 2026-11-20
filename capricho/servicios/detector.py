@@ -165,15 +165,17 @@ def _anomalia(tipo, nivel, cantidad, ventana, detalle):
             "ventana_segundos": ventana, "detalle": detalle}
 
 
-def _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, llegada):
+def _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, llegada, canal=None, analisis=None):
     momento = a_texto(llegada)
     cursor = db.execute(
         """INSERT INTO transacciones (id_txn, usuario_id, valor, fecha_txn, estado, hash, hash_valido, firma,
-                                      riesgo_ia, metodo_pago, origen, ip, fecha_creacion, fecha_actualizacion)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                      riesgo_ia, prob_fraude, clasificacion, metodo_pago, canal, origen, ip, analisis,
+                                      fecha_creacion, fecha_actualizacion)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (txn["id_txn"], usuario_id, txn["valor"], a_texto(txn["fecha"]), estado_txn, txn["hash"],
          int(txn["hash_valido"]), txn.get("firma", "firmada por la tienda"), txn.get("riesgo_ia"),
-         txn["metodo_pago"], origen, ip, momento, momento),
+         txn.get("prob_fraude"), txn.get("clasificacion"), txn["metodo_pago"], canal, origen, ip,
+         json.dumps(analisis, ensure_ascii=False, default=str) if analisis else None, momento, momento),
     )
     transaccion_id = cursor.lastrowid
 
@@ -202,7 +204,7 @@ def _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, lle
     return transaccion_id
 
 
-def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None,
+def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None, canal=None,
                          contar_llegada=True, confirmar=True):
     """Analiza y registra una transacción ya validada.
 
@@ -297,7 +299,8 @@ def procesar_transaccion(db, estado, txn, *, origen, ip=None, llegada=None,
                 if estado_txn == "APROBADA":
                     estado_txn = "SOSPECHOSA"
 
-        transaccion_id = _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, llegada)
+        transaccion_id = _guardar(db, estado, usuario_id, txn, estado_txn, anomalias, origen, ip, llegada,
+                                  canal, analisis)
         if confirmar:
             db.commit()
 

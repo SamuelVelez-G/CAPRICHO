@@ -20,6 +20,7 @@ class PruebaCapricho(unittest.TestCase):
         self.app = create_app({
             "BASE_DATOS": str(self.carpeta / "prueba.db"),
             "CARPETA_LOGS": str(self.carpeta / "logs"),
+            "CARPETA_COMPROBANTES": str(self.carpeta / "comprobantes"),
             "LLAVE_HMAC": LLAVE,
             "SEMBRAR": "base",
             "TESTING": True,

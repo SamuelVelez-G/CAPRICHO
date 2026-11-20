@@ -228,20 +228,28 @@ def login_requerido(vista):
     return envoltura
 
 
-def admin_requerido(vista):
-    @wraps(vista)
-    def envoltura(*args, **kwargs):
-        usuario = usuario_actual()
-        if usuario is None:
-            if request.path.startswith("/api/"):
-                raise ErrorNoAutenticado("Debes iniciar sesión como administrador.")
-            return redirect(url_for("paginas.ingresar", siguiente=request.path))
-        if usuario["rol"] != "ADMIN":
-            if request.path.startswith("/api/"):
-                raise ErrorProhibido("Solo el administrador puede hacer esto.")
-            return redirect(url_for("paginas.inicio"))
-        return vista(*args, **kwargs)
-    return envoltura
+def _roles_requeridos(roles, mensaje):
+    def decorador(vista):
+        @wraps(vista)
+        def envoltura(*args, **kwargs):
+            usuario = usuario_actual()
+            if usuario is None:
+                if request.path.startswith("/api/"):
+                    raise ErrorNoAutenticado("Debes iniciar sesión.")
+                return redirect(url_for("paginas.ingresar", siguiente=request.path))
+            if usuario["rol"] not in roles:
+                if request.path.startswith("/api/"):
+                    raise ErrorProhibido(mensaje)
+                return redirect(url_for("paginas.inicio"))
+            return vista(*args, **kwargs)
+        return envoltura
+    return decorador
+
+
+# Solo el administrador.
+admin_requerido = _roles_requeridos(("ADMIN",), "Solo el administrador puede hacer esto.")
+# Administrador o empleado (caja: pedidos, facturas y pagos).
+personal_requerido = _roles_requeridos(("ADMIN", "EMPLEADO"), "Solo el personal de Capricho puede hacer esto.")
 
 
 # =============================================================================

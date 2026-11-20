@@ -39,17 +39,36 @@ def cerrar_db(_error=None):
         conexion.close()
 
 
+VERSION_ESQUEMA = 2
+
+
+def respaldar_si_es_antigua(ruta: str):
+    """La versión 2 cambió tablas (categorías, inventario, facturas, pagos).
+    Una base de la versión 1 no se puede migrar con ALTER TABLE porque
+    cambian restricciones CHECK; se guarda como respaldo y se crea una nueva.
+    Devuelve la ruta del respaldo o None."""
+    archivo = Path(ruta)
+    if not archivo.exists():
+        return None
+    conexion = sqlite3.connect(ruta)
+    try:
+        version = conexion.execute("PRAGMA user_version").fetchone()[0]
+        tablas = conexion.execute("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'").fetchone()[0]
+    finally:
+        conexion.close()
+    if tablas == 0 or version >= VERSION_ESQUEMA:
+        return None
+    from datetime import datetime
+    respaldo = archivo.with_name(f"{archivo.stem}-v{version or 1}-respaldo-{datetime.now():%Y%m%d%H%M%S}{archivo.suffix}")
+    archivo.rename(respaldo)
+    for sufijo in ("-wal", "-shm"):
+        Path(ruta + sufijo).unlink(missing_ok=True)
+    return respaldo
+
+
 def crear_esquema(conexion: sqlite3.Connection):
     conexion.execute("PRAGMA journal_mode = WAL")   # lecturas y escrituras en paralelo
     conexion.executescript(ESQUEMA.read_text(encoding="utf-8"))
-    # Bases creadas antes de agregar la columna "firma".
-    columnas = {fila[1] for fila in conexion.execute("PRAGMA table_info(transacciones)")}
-    if "firma" not in columnas:
-        conexion.execute("ALTER TABLE transacciones ADD COLUMN firma TEXT")
-    if "riesgo_ia" not in columnas:
-        conexion.execute("ALTER TABLE transacciones ADD COLUMN riesgo_ia REAL")
-    if "demo" not in {fila[1] for fila in conexion.execute("PRAGMA table_info(eventos)")}:
-        conexion.execute("ALTER TABLE eventos ADD COLUMN demo INTEGER NOT NULL DEFAULT 0")
     conexion.commit()
 
 

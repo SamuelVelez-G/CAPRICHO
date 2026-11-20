@@ -20,7 +20,12 @@ from .tiempo import ahora, interpretar_fecha_externa
 
 NOMBRE_MIN_LETRAS = 4          # "más de 3 letras"
 NOMBRE_MAX = 60
-METODOS_PAGO = ("Tarjeta", "Nequi", "Daviplata", "PSE", "Efectivo")
+METODOS_PAGO = ("Tarjeta", "Nequi", "Daviplata", "PSE", "Efectivo", "Transferencia")
+METODOS_TIENDA = ("Tarjeta", "Nequi", "Daviplata", "PSE", "Efectivo")
+ROLES = ("CLIENTE", "EMPLEADO", "ADMIN")
+ESTADOS_USUARIO = ("ACTIVO", "EN_OBSERVACION", "BLOQUEADO", "INACTIVO")
+TIPOS_PRODUCTO = ("GRANIZADO", "ADICION", "OTRO")
+CANALES = ("PRESENCIAL", "WEB", "APP", "DOMICILIO")
 VALOR_MAXIMO_TRANSACCION = 50_000_000
 
 RE_NOMBRE = re.compile(r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+( [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$")
@@ -31,6 +36,7 @@ RE_ID_TXN = re.compile(r"^[A-Za-z0-9_\-:.]{1,64}$")
 RE_ID_USUARIO = re.compile(r"^[a-z0-9._+\-]{2,120}$")
 RE_NUMERO = re.compile(r"^\d+(\.\d+)?$")
 RE_METODO = re.compile(r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 ._\-]{2,40}$")
+RE_REFERENCIA = re.compile(r"^[A-Za-z0-9_\-]{4,40}$")
 RE_TEXTO_PRODUCTO = re.compile(r"^[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ.,()% \-]+$")
 
 
@@ -340,7 +346,7 @@ def validar_pedido(datos, sabores, barrios, max_adiciones):
             elif not re.search(r"\d", direccion):
                 errores["direccion"] = "Incluye el número de la dirección"
 
-    metodo = _opcion(datos, "metodo_pago", errores, "El método de pago", METODOS_PAGO)
+    metodo = _opcion(datos, "metodo_pago", errores, "El método de pago", METODOS_TIENDA)
     total = _entero(datos, "total", errores, "El total", 0, 10 ** 8)
 
     if errores:
@@ -355,7 +361,8 @@ def validar_pedido(datos, sabores, barrios, max_adiciones):
 #  Productos (CRUD de la diapositiva 3)
 # =============================================================================
 
-CAMPOS_PRODUCTO = ("nombre", "descripcion", "categoria", "precio", "onzas", "imagen", "activo")
+CAMPOS_PRODUCTO = ("nombre", "descripcion", "categoria_id", "tipo", "precio", "onzas", "imagen", "stock",
+                   "stock_minimo", "activo")
 
 
 def validar_producto(datos, imagenes_permitidas, parcial=False):
@@ -388,10 +395,19 @@ def validar_producto(datos, imagenes_permitidas, parcial=False):
                 errores["descripcion"] = "Entre 5 y 200 caracteres: letras, números y . , ( ) % -"
             else:
                 limpio["descripcion"] = descripcion
-    if pedir("categoria"):
-        categoria = _opcion(datos, "categoria", errores, "La categoría", ("GRANIZADO", "ADICION"))
-        if categoria:
-            limpio["categoria"] = categoria
+    if pedir("categoria_id"):
+        categoria_id = _entero(datos, "categoria_id", errores, "La categoría", 1, 10 ** 9)
+        if categoria_id is not None:
+            limpio["categoria_id"] = categoria_id
+    if pedir("tipo"):
+        tipo = _opcion(datos, "tipo", errores, "El tipo", TIPOS_PRODUCTO)
+        if tipo:
+            limpio["tipo"] = tipo
+    for campo, etiqueta in (("stock", "El inventario"), ("stock_minimo", "El inventario mínimo")):
+        if pedir(campo):
+            valor = _entero(datos, campo, errores, etiqueta, 0, 100_000)
+            if valor is not None:
+                limpio[campo] = valor
     if pedir("precio"):
         precio = _entero(datos, "precio", errores, "El precio", 500, 500_000)
         if precio is not None:
@@ -523,3 +539,186 @@ def validar_reglas(datos, actuales, parcial=False):
     if errores:
         raise ErrorValidacion(errores)
     return nuevas
+
+
+# =============================================================================
+#  Categorías, usuarios, caja y pagos
+# =============================================================================
+
+def _solo_campos(datos, permitidos, parcial):
+    exigir_objeto(datos)
+    desconocidos = set(datos) - set(permitidos)
+    if desconocidos:
+        raise ErrorValidacion({c: "Campo desconocido" for c in sorted(desconocidos)})
+    if parcial and not datos:
+        raise ErrorValidacion({"cuerpo": "Envía al menos un campo para actualizar"})
+
+
+def validar_categoria(datos, parcial=False):
+    _solo_campos(datos, ("nombre", "descripcion", "activo"), parcial)
+    errores, limpio = {}, {}
+    if not parcial or "nombre" in datos:
+        nombre = _texto(datos, "nombre", errores, "El nombre")
+        if nombre:
+            if not 3 <= len(nombre) <= 40 or not RE_TEXTO_PRODUCTO.match(nombre):
+                errores["nombre"] = "Entre 3 y 40 caracteres: letras, números y . , ( ) -"
+            else:
+                limpio["nombre"] = nombre
+    if not parcial or "descripcion" in datos:
+        descripcion = datos.get("descripcion")
+        if descripcion is None or (isinstance(descripcion, str) and not descripcion.strip()):
+            limpio["descripcion"] = ""
+        elif (not isinstance(descripcion, str) or len(descripcion) > 200
+              or not RE_TEXTO_PRODUCTO.match(descripcion.strip())):
+            errores["descripcion"] = "Hasta 200 caracteres: letras, números y . , ( ) % -"
+        else:
+            limpio["descripcion"] = " ".join(descripcion.split())
+    if not parcial or "activo" in datos:
+        if not isinstance(datos.get("activo"), bool):
+            errores["activo"] = "Debe ser true o false"
+        else:
+            limpio["activo"] = datos["activo"]
+    if errores:
+        raise ErrorValidacion(errores)
+    return limpio
+
+
+def _celular(texto):
+    return re.sub(r"[ \t-]", "", texto)
+
+
+def validar_usuario(datos, parcial=False):
+    """CRUD de usuarios del administrador. La contraseña es opcional para clientes."""
+    _solo_campos(datos, ("nombre", "email", "telefono", "rol", "estado", "password"), parcial)
+    errores, limpio = {}, {}
+
+    def pedir(campo):
+        return not parcial or campo in datos
+
+    if pedir("nombre"):
+        nombre = _texto(datos, "nombre", errores, "El nombre")
+        if nombre and (error := validar_nombre(nombre)):
+            errores["nombre"] = error
+        elif nombre:
+            limpio["nombre"] = nombre
+    if pedir("email"):
+        email = _texto(datos, "email", errores, "El correo")
+        if email:
+            email = email.lower()
+            if error := validar_email(email):
+                errores["email"] = error
+            else:
+                limpio["email"] = email
+    if pedir("telefono"):
+        telefono = datos.get("telefono")
+        if _vacio(telefono):
+            limpio["telefono"] = None
+        elif not isinstance(telefono, str) or not RE_TELEFONO.match(_celular(telefono)):
+            errores["telefono"] = "Debe ser un celular colombiano de 10 dígitos que empiece por 3"
+        else:
+            limpio["telefono"] = _celular(telefono)
+    if pedir("rol"):
+        rol = _opcion(datos, "rol", errores, "El rol", ROLES)
+        if rol:
+            limpio["rol"] = rol
+    if pedir("estado"):
+        estado = _opcion(datos, "estado", errores, "El estado", ESTADOS_USUARIO)
+        if estado:
+            limpio["estado"] = estado
+    if "password" in datos and not _vacio(datos["password"]):
+        if not isinstance(datos["password"], str):
+            errores["password"] = "La contraseña debe ser texto"
+        elif error := validar_password(datos["password"]):
+            errores["password"] = error
+        else:
+            limpio["password"] = datos["password"]
+    if errores:
+        raise ErrorValidacion(errores)
+    return limpio
+
+
+def validar_pedido_caja(datos, barrios, max_adiciones):
+    """Pedido tomado por un empleado: varios ítems, canal y descuento opcional."""
+    exigir_objeto(datos)
+    errores = {}
+    items = datos.get("items")
+    items_limpios = []
+    if not isinstance(items, list) or not items:
+        errores["items"] = "Agrega al menos un ítem"
+    elif len(items) > 30:
+        errores["items"] = "Máximo 30 líneas por pedido"
+    else:
+        for posicion, item in enumerate(items):
+            if not isinstance(item, dict):
+                errores[f"items[{posicion}]"] = "Formato inválido"
+                continue
+            errores_item = {}
+            producto_id = _entero(item, "producto_id", errores_item, "El producto", 1, 10 ** 9)
+            cantidad = _entero(item, "cantidad", errores_item, "La cantidad", 1, 50)
+            adiciones = item.get("adiciones", [])
+            if not isinstance(adiciones, list) or len(adiciones) > max_adiciones or not all(
+                    _es_entero(a) and a > 0 for a in adiciones) or len(set(adiciones)) != len(adiciones):
+                errores_item["adiciones"] = f"Lista de hasta {max_adiciones} adiciones distintas"
+            sabor = item.get("sabor")
+            if sabor is not None and (not isinstance(sabor, str) or len(sabor) > 40):
+                errores_item["sabor"] = "Texto de hasta 40 caracteres"
+            for campo, mensaje in errores_item.items():
+                errores[f"items[{posicion}].{campo}"] = mensaje
+            if not errores_item:
+                items_limpios.append({"producto_id": producto_id, "cantidad": cantidad,
+                                      "adiciones": sorted(adiciones), "sabor": sabor or "Café artesanal"})
+
+    canal = _opcion(datos, "canal", errores, "El canal", CANALES)
+    tipo_entrega = _opcion(datos, "tipo_entrega", errores, "El tipo de entrega", ("DOMICILIO", "RECOGER"))
+    barrio = direccion = None
+    if tipo_entrega == "DOMICILIO":
+        barrio = _opcion(datos, "barrio", errores, "El barrio", barrios)
+        direccion = _texto(datos, "direccion", errores, "La dirección")
+        if direccion and (not 6 <= len(direccion) <= 120 or not RE_DIRECCION.match(direccion)):
+            errores["direccion"] = "Entre 6 y 120 caracteres: letras, números y # . , - /"
+    metodo = _opcion(datos, "metodo_pago", errores, "El método de pago", METODOS_PAGO)
+
+    cliente = datos.get("cliente_email")
+    if _vacio(cliente):
+        cliente = None
+    elif not isinstance(cliente, str) or validar_email(cliente.strip().lower()):
+        errores["cliente_email"] = "Correo inválido (o déjalo vacío para consumidor final)"
+    else:
+        cliente = cliente.strip().lower()
+
+    porcentaje = datos.get("descuento_porcentaje", 0)
+    motivo = datos.get("motivo_descuento")
+    if porcentaje in (None, ""):
+        porcentaje = 0
+    if not _es_entero(porcentaje) or not 0 <= porcentaje <= 100:
+        errores["descuento_porcentaje"] = "Entero entre 0 y 100"
+    elif porcentaje and (_vacio(motivo) or not isinstance(motivo, str) or not 4 <= len(motivo.strip()) <= 120):
+        errores["motivo_descuento"] = "Un descuento necesita un motivo (4 a 120 caracteres)"
+    if errores:
+        raise ErrorValidacion(errores)
+    return {"items": items_limpios, "canal": canal, "tipo_entrega": tipo_entrega, "barrio": barrio,
+            "direccion": direccion, "metodo_pago": metodo, "cliente_email": cliente,
+            "descuento_porcentaje": porcentaje, "motivo_descuento": " ".join(motivo.split()) if porcentaje else None}
+
+
+def validar_pago(datos):
+    """Viene de un formulario multipart: todo llega como texto."""
+    errores = {}
+    metodo = _opcion(datos, "metodo", errores, "El método", METODOS_PAGO)
+    monto = (datos.get("monto") or "").strip()
+    if not monto.isdigit() or not 100 <= int(monto) <= 50_000_000:
+        errores["monto"] = "Entero entre 100 y 50.000.000"
+    referencia = (datos.get("referencia") or "").strip() or None
+    if referencia and not RE_REFERENCIA.match(referencia):
+        errores["referencia"] = "Entre 4 y 40 letras, números o guiones"
+    if errores:
+        raise ErrorValidacion(errores)
+    return {"metodo": metodo, "monto": int(monto), "referencia": referencia}
+
+
+def validar_anulacion(datos):
+    exigir_objeto(datos)
+    motivo = datos.get("motivo")
+    if _vacio(motivo) or not isinstance(motivo, str) or not 5 <= len(motivo.strip()) <= 200:
+        raise ErrorValidacion({"motivo": "Escribe el motivo de la anulación (5 a 200 caracteres)"})
+    return " ".join(motivo.split())

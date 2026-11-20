@@ -89,7 +89,8 @@ class PreciosEnElServidor(PruebaCapricho):
 
 class MetodosHttp(PruebaCapricho):
     NUEVO = {"nombre": "Granizado Familiar", "descripcion": "Granizado de café artesanal de 32 oz",
-             "categoria": "GRANIZADO", "precio": 16000, "onzas": 32, "imagen": "menu.jpg", "activo": True}
+             "categoria_id": 1, "tipo": "GRANIZADO", "precio": 16000, "onzas": 32, "imagen": "menu.jpg",
+             "stock": 50, "stock_minimo": 5, "activo": True}
 
     def test_crud_completo(self):
         self.como_admin()

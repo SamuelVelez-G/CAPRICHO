@@ -12,7 +12,7 @@ CRUD de productos: los cinco métodos HTTP de la diapositiva 3.
 from flask import Blueprint, request
 
 from ..db import obtener_db
-from ..seguridad import admin_requerido, exigir_csrf, revisar_inyeccion, usuario_actual
+from ..seguridad import admin_requerido, exigir_csrf, personal_requerido, revisar_inyeccion, usuario_actual
 from ..servicios import catalogo
 from ..validaciones import validar_producto
 from . import leer_json, ok
@@ -23,7 +23,7 @@ bp = Blueprint("api_productos", __name__, url_prefix="/api/productos")
 @bp.get("")
 def listar():
     usuario = usuario_actual()
-    incluir_inactivos = request.args.get("todos") == "1" and usuario and usuario["rol"] == "ADMIN"
+    incluir_inactivos = request.args.get("todos") == "1" and usuario and usuario["rol"] in ("ADMIN", "EMPLEADO")
     return ok({
         "productos": catalogo.listar(obtener_db(), incluir_inactivos),
         "sabores": list(catalogo.SABORES),
@@ -34,6 +34,13 @@ def listar():
 @bp.get("/<int:producto_id>")
 def obtener(producto_id):
     return ok({"producto": catalogo.obtener(obtener_db(), producto_id)})
+
+
+@bp.get("/<int:producto_id>/movimientos")
+@personal_requerido
+def movimientos(producto_id):
+    db = obtener_db()
+    return ok({"producto": catalogo.obtener(db, producto_id), "movimientos": catalogo.movimientos(db, producto_id)})
 
 
 @bp.post("")

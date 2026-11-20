@@ -16,27 +16,40 @@ CARPETA_INSTANCIA = RAIZ / "instancia"
 CARPETA_LOGS = RAIZ / "logs"
 
 
-def _llave_de_sesion() -> str:
-    """Llave que firma la cookie de sesión.
+def _llave_local(variable: str, archivo: str) -> str:
+    """Llave secreta generada una sola vez y guardada en instancia/.
 
-    Se genera una sola vez y se guarda en instancia/, así las sesiones
-    sobreviven a un reinicio del servidor y la llave nunca queda en git.
+    Así sobrevive a un reinicio del servidor y nunca queda en git. En un
+    despliegue real se pasa por variable de entorno.
     """
-    desde_entorno = os.environ.get("CAPRICHO_SECRET_KEY")
+    desde_entorno = os.environ.get(variable)
     if desde_entorno:
         return desde_entorno
     CARPETA_INSTANCIA.mkdir(exist_ok=True)
-    archivo = CARPETA_INSTANCIA / "secret_key.txt"
-    if not archivo.exists():
-        archivo.write_text(secrets.token_hex(32), encoding="utf-8")
-    return archivo.read_text(encoding="utf-8").strip()
+    ruta = CARPETA_INSTANCIA / archivo
+    if not ruta.exists():
+        ruta.write_text(secrets.token_hex(32), encoding="utf-8")
+    return ruta.read_text(encoding="utf-8").strip()
 
 
 class Configuracion:
     BASE_DATOS = os.environ.get("CAPRICHO_DB", str(CARPETA_INSTANCIA / "capricho.db"))
     CARPETA_LOGS = str(CARPETA_LOGS)
 
-    SECRET_KEY = _llave_de_sesion()
+    # Firma la cookie de sesión.
+    SECRET_KEY = _llave_local("CAPRICHO_SECRET_KEY", "secret_key.txt")
+
+    # Encadena facturas y pagos (HMAC-SHA256). Quien altere la base de datos
+    # sin esta llave no puede recalcular la cadena.
+    LLAVE_INTEGRIDAD = _llave_local("CAPRICHO_LLAVE_INTEGRIDAD", "llave_integridad.txt").encode("utf-8")
+
+    # Impuesto nacional al consumo de restaurantes y cafeterías (8 %). Los
+    # precios del menú ya lo incluyen; la factura lo discrimina.
+    TASA_IMPUESTO = 0.08
+
+    # Comprobantes de pago adjuntos: PDF, PNG o JPG de hasta 2 MB.
+    CARPETA_COMPROBANTES = str(CARPETA_INSTANCIA / "comprobantes")
+    COMPROBANTE_MAX_BYTES = 2 * 1024 * 1024
 
     # Llave compartida con la pasarela de pagos para firmar transacciones
     # con HMAC-SHA256 (diapositiva 19). Quien no la tenga no puede generar
@@ -75,6 +88,8 @@ class Configuracion:
     ADMIN_PASSWORD = os.environ.get("CAPRICHO_ADMIN_PASSWORD", "Capricho2026*")
     CLIENTE_DEMO_EMAIL = "cliente@capricho.co"
     CLIENTE_DEMO_PASSWORD = "Cliente2026*"
+    EMPLEADO_DEMO_EMAIL = "caja@capricho.co"          # cajera; los demás empleados usan la misma contraseña
+    EMPLEADO_DEMO_PASSWORD = "Caja2026*"
 
     # Cookie de sesión: JavaScript no la puede leer y no viaja en peticiones
     # que otro sitio dispare (mitiga robo de sesión y CSRF).

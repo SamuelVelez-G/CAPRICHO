@@ -1,4 +1,8 @@
 flask>=3.1,<4
-# Detector con IA: Keras 3 sobre PyTorch (TensorFlow aún no tiene versión para Python 3.14).
-keras>=3.15
-torch>=2.9
+keras>=3.10
+# IA: TensorFlow 2.21 necesita Python 3.10 a 3.13 (el proyecto usa 3.12).
+# Si alguien solo tiene Python 3.14, Keras corre sobre PyTorch con el mismo
+# código y carga los mismos modelos; lo único que exige TensorFlow es volver
+# a entrenar (herramientas/entrenar_modelos.py).
+tensorflow>=2.20; python_version < "3.14"
+torch>=2.9; python_version >= "3.14"

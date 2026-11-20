@@ -9,7 +9,7 @@ Pedidos de la tienda y cola de atención.
     PATCH /api/pedidos/<id>          marcar ENTREGADO (administrador)
 """
 
-from flask import Blueprint
+from flask import Blueprint, current_app
 
 from ..db import obtener_db
 from ..errores import ErrorProhibido, ErrorValidacion
@@ -28,7 +28,7 @@ def crear():
     datos = leer_json()
     revisar_inyeccion(datos)
     limpio = validar_pedido(datos, catalogo.SABORES, tuple(domicilios.BARRIOS), catalogo.MAX_ADICIONES)
-    pedido = pedidos.crear(obtener_db(), estado_app(), usuario_actual(), limpio, ip_cliente())
+    pedido = pedidos.crear(obtener_db(), estado_app(), current_app.config, usuario_actual(), limpio, ip_cliente())
     codigo = 429 if pedido["estado"] == "RECHAZADO" else 201
     return ok({"pedido": pedido}, codigo)
 
